@@ -9,6 +9,7 @@ import (
 )
 
 type {{.ModuleName}}Fields struct {
+	// THIS IS FIELD MARKER. DO NOT TOUCH!
 }
 
 type {{.ModuleName}} struct {
@@ -26,6 +27,7 @@ func (m *{{.ModuleName}}) toRepository() *repository.{{.ModuleName}} {
 	return &repository.{{.ModuleName}}{
 		UID: m.UID,
 		{{.ModuleName}}Fields: repository.{{.ModuleName}}Fields{
+			// THIS IS MAPPER MARKER. DO NOT TOUCH!
 		},
 		CreatedAt: m.CreatedAt,
 		CreatedBy: m.CreatedBy,

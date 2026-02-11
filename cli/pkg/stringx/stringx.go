@@ -51,3 +51,21 @@ func (n Stringx) RepositoryFileName() string {
 func (n Stringx) ModelFileName() string {
 	return fmt.Sprintf("%s_model.go", n.instance.SnakeCase().ToLower())
 }
+func (n Stringx) SnakeCase() string {
+	return n.instance.SnakeCase().ToLower()
+}
+
+func (n Stringx) BsonTag() string {
+	return fmt.Sprintf("bson:\"%s\"", n.SnakeCase())
+}
+
+func (n Stringx) JsonTag() string {
+	return fmt.Sprintf("json:\"%s\"", n.SnakeCase())
+}
+
+func (n Stringx) ValidateTag() string {
+	if n.ModuleName() == "Email" {
+		return "validate:\"required,email\""
+	}
+	return "validate:\"required\""
+}

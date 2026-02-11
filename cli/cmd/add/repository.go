@@ -18,7 +18,10 @@ var addRepositoryCmd = &cobra.Command{
 	RunE: func(cmd *cobra.Command, args []string) error {
 		module := stringx.New(args[0])
 		conf, err := config.Load()
-
+		if err != nil {
+			logger.Error().Err(err).Msg("failed to load config")
+			return err
+		}
 		projectRoot, err := os.Getwd()
 		if err != nil {
 			logger.Error().Err(err).Msg("failed to get working directory")
