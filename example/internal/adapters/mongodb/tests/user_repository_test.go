@@ -1,0 +1,138 @@
+package mongodb
+
+import (
+	"context"
+	"goserve/internal/adapters/mongodb"
+	"goserve/internal/repository"
+	"testing"
+
+	"github.com/google/uuid"
+	"github.com/stretchr/testify/assert"
+	"go.mongodb.org/mongo-driver/v2/bson"
+)
+
+var userRepository repository.UserRepository
+var actor = &repository.Actor{
+	UID:   uuid.New(),
+	Scope: "owner",
+}
+
+var userCreatePayload = repository.UserFields{
+	Email: "test@gmail.com",
+}
+
+var userUpdatePayload = repository.UserFields{
+	Email: "test1@gmail.com",
+}
+
+func init() {
+
+}
+
+func beforeAllUserRepositoryTests() error {
+	// construct the user repository
+	userRepository = mongodb.NewUserRepository(db.Client(), db.Database())
+	return nil
+}
+func afterAllUserRepositoryTests() error {
+	// delete all the data
+	_, err := db.Database().Collection(mongodb.UserCollectionName).DeleteMany(context.TODO(), bson.M{})
+	return err
+}
+
+// it should be able to create an user and setup default field from actor
+func TestUserRepository_Create(t *testing.T) {
+	assert.NoError(t, beforeAllUserRepositoryTests())
+
+	u, err := userRepository.Create(context.TODO(), actor, userCreatePayload)
+
+	assert.NoError(t, err)
+	assert.Equal(t, u.CreatedBy.String(), actor.UID.String())
+	assert.False(t, u.CreatedAt.IsZero())
+	assert.False(t, u.UpdatedAt.IsZero())
+	assert.Equal(t, u.UpdatedBy.String(), actor.UID.String())
+
+	assert.NoError(t, afterAllUserRepositoryTests())
+}
+
+// it should be able to view an user
+func TestUserRepository_View(t *testing.T) {
+	assert.NoError(t, beforeAllUserRepositoryTests())
+
+	u, err := userRepository.Create(context.TODO(), actor, userCreatePayload)
+
+	assert.NoError(t, err)
+	u, err = userRepository.FindByID(context.TODO(), actor, u.UID)
+	assert.NoError(t, err)
+	assert.NotNil(t, u)
+	assert.Equal(t, userCreatePayload.Email, u.Email)
+
+	assert.NoError(t, afterAllUserRepositoryTests())
+}
+
+// it should be able to update a user
+func TestUserRepository_Update(t *testing.T) {
+	assert.NoError(t, beforeAllUserRepositoryTests())
+
+	u, err := userRepository.Create(context.TODO(), actor, userCreatePayload)
+	assert.NoError(t, err)
+
+	_, err = userRepository.UpdateByID(context.TODO(), actor, u.UID, userUpdatePayload)
+	assert.NoError(t, err)
+
+	u, err = userRepository.FindByID(context.TODO(), actor, u.UID)
+	assert.NoError(t, err)
+
+	assert.False(t, u.UpdatedAt.IsZero())
+	assert.Equal(t, u.UpdatedBy.String(), actor.UID.String())
+	assert.Equal(t, userUpdatePayload.Email, u.Email)
+	assert.NoError(t, afterAllUserRepositoryTests())
+}
+
+// it should be able to delete a user
+func TestUserRepository_Delete(t *testing.T) {
+	assert.NoError(t, beforeAllUserRepositoryTests())
+
+	u, err := userRepository.Create(context.TODO(), actor, userCreatePayload)
+	assert.NoError(t, err)
+
+	_, err = userRepository.DeleteByID(context.TODO(), actor, u.UID)
+	assert.NoError(t, err)
+
+	u, err = userRepository.FindByID(context.TODO(), actor, u.UID)
+	assert.Error(t, err)
+
+	assert.NoError(t, afterAllUserRepositoryTests())
+}
+
+// it should be able to Destroy a user
+func TestUserRepository_Destroy(t *testing.T) {
+	assert.NoError(t, beforeAllUserRepositoryTests())
+
+	u, err := userRepository.Create(context.TODO(), actor, userCreatePayload)
+	assert.NoError(t, err)
+
+	_, err = userRepository.DestroyByID(context.TODO(), actor, u.UID)
+	assert.NoError(t, err)
+
+	u, err = userRepository.FindByID(context.TODO(), actor, u.UID)
+	assert.Error(t, err)
+
+	assert.NoError(t, afterAllUserRepositoryTests())
+}
+
+// it should be able to List users
+func TestUserRepository_List(t *testing.T) {
+	assert.NoError(t, beforeAllUserRepositoryTests())
+
+	_, err := userRepository.Create(context.TODO(), actor, userCreatePayload)
+	assert.NoError(t, err)
+	_, err = userRepository.Create(context.TODO(), actor, userUpdatePayload)
+	assert.NoError(t, err)
+
+	result, err := userRepository.List(context.TODO(), actor, &repository.ListOptions{})
+	assert.NoError(t, err)
+	assert.Equal(t, len(result.Data), 2)
+
+	assert.NoError(t, afterAllUserRepositoryTests())
+}

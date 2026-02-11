@@ -1,0 +1,32 @@
+package repository
+
+import (
+	"context"
+	"time"
+
+	"github.com/google/uuid"
+)
+
+type {{.ModuleTitle}}Fields struct {
+}
+
+type {{.ModuleTitle}} struct {
+	UID uuid.UUID
+	{{.ModuleTitle}}Fields
+	CreatedAt time.Time
+	CreatedBy uuid.UUID
+	UpdatedAt time.Time
+	UpdatedBy uuid.UUID
+	DeletedAt *time.Time
+	DeletedBy *uuid.UUID
+}
+
+type {{.ModuleTitle}}Repository interface {
+	List(context.Context, *Actor, *ListOptions) (*ListResponse[*{{.ModuleTitle}}], error)
+	Create(context.Context, *Actor, {{.ModuleTitle}}Fields) (*{{.ModuleTitle}}, error)
+	FindByID(context.Context, *Actor, uuid.UUID) (*{{.ModuleTitle}}, error)
+	UpdateByID(context.Context, *Actor, uuid.UUID, {{.ModuleTitle}}Fields) (bool, error)
+	DeleteByID(context.Context, *Actor, uuid.UUID) (bool, error)
+	DestroyByID(context.Context, *Actor, uuid.UUID) (bool, error)
+}
+
