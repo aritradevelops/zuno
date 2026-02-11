@@ -9,6 +9,7 @@ require (
 
 require (
 	github.com/gertd/go-pluralize v0.2.1 // indirect
+	github.com/gobeam/stringy v0.0.7 // indirect
 	github.com/inconshreveable/mousetrap v1.1.0 // indirect
 	github.com/mattn/go-colorable v0.1.13 // indirect
 	github.com/mattn/go-isatty v0.0.19 // indirect

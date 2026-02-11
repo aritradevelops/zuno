@@ -8,12 +8,12 @@ import (
 	"go.mongodb.org/mongo-driver/v2/bson"
 )
 
-type {{.ModuleTitle}}Fields struct {
+type {{.ModuleName}}Fields struct {
 }
 
-type {{.ModuleTitle}} struct {
+type {{.ModuleName}} struct {
 	UID        uuid.UUID `bson:"uid,omitempty"`
-	{{.ModuleTitle}}Fields `bson:",inline"`
+	{{.ModuleName}}Fields `bson:",inline"`
 	CreatedAt  time.Time  `bson:"created_at,omitempty"`
 	CreatedBy  uuid.UUID  `bson:"created_by,omitempty"`
 	UpdatedAt  time.Time  `bson:"updated_at,omitempty"`
@@ -22,22 +22,22 @@ type {{.ModuleTitle}} struct {
 	DeletedBy  *uuid.UUID `bson:"deleted_by,omitempty"`
 }
 
-func (u *{{.ModuleTitle}}) toRepository() *repository.{{.ModuleTitle}} {
-	return &repository.{{.ModuleTitle}}{
-		UID: u.UID,
-		{{.ModuleTitle}}Fields: repository.{{.ModuleTitle}}Fields{
+func (m *{{.ModuleName}}) toRepository() *repository.{{.ModuleName}} {
+	return &repository.{{.ModuleName}}{
+		UID: m.UID,
+		{{.ModuleName}}Fields: repository.{{.ModuleName}}Fields{
 		},
-		CreatedAt: u.CreatedAt,
-		CreatedBy: u.CreatedBy,
-		UpdatedAt: u.UpdatedAt,
-		UpdatedBy: u.UpdatedBy,
-		DeletedAt: u.DeletedAt,
-		DeletedBy: u.DeletedBy,
+		CreatedAt: m.CreatedAt,
+		CreatedBy: m.CreatedBy,
+		UpdatedAt: m.UpdatedAt,
+		UpdatedBy: m.UpdatedBy,
+		DeletedAt: m.DeletedAt,
+		DeletedBy: m.DeletedBy,
 	}
 }
 
-func (u {{.ModuleTitle}}Fields) toMap() (map[string]any, error) {
-	raw, err := bson.Marshal(u)
+func (m {{.ModuleName}}Fields) toMap() (map[string]any, error) {
+	raw, err := bson.Marshal(m)
 	if err != nil {
 		return nil, err
 	}

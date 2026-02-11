@@ -7,12 +7,12 @@ import (
 	"github.com/google/uuid"
 )
 
-type {{.ModuleTitle}}Fields struct {
+type {{.ModuleName}}Fields struct {
 }
 
-type {{.ModuleTitle}} struct {
+type {{.ModuleName}} struct {
 	UID uuid.UUID
-	{{.ModuleTitle}}Fields
+	{{.ModuleName}}Fields
 	CreatedAt time.Time
 	CreatedBy uuid.UUID
 	UpdatedAt time.Time
@@ -21,11 +21,11 @@ type {{.ModuleTitle}} struct {
 	DeletedBy *uuid.UUID
 }
 
-type {{.ModuleTitle}}Repository interface {
-	List(context.Context, *Actor, *ListOptions) (*ListResponse[*{{.ModuleTitle}}], error)
-	Create(context.Context, *Actor, {{.ModuleTitle}}Fields) (*{{.ModuleTitle}}, error)
-	FindByID(context.Context, *Actor, uuid.UUID) (*{{.ModuleTitle}}, error)
-	UpdateByID(context.Context, *Actor, uuid.UUID, {{.ModuleTitle}}Fields) (bool, error)
+type {{.ModuleName}}Repository interface {
+	List(context.Context, *Actor, *ListOptions) (*ListResponse[*{{.ModuleName}}], error)
+	Create(context.Context, *Actor, {{.ModuleName}}Fields) (*{{.ModuleName}}, error)
+	FindByID(context.Context, *Actor, uuid.UUID) (*{{.ModuleName}}, error)
+	UpdateByID(context.Context, *Actor, uuid.UUID, {{.ModuleName}}Fields) (bool, error)
 	DeleteByID(context.Context, *Actor, uuid.UUID) (bool, error)
 	DestroyByID(context.Context, *Actor, uuid.UUID) (bool, error)
 }
