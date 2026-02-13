@@ -1,0 +1,13 @@
+package mongodb
+
+import (
+	"goserve/internal/repository"
+
+	"go.mongodb.org/mongo-driver/v2/mongo"
+)
+
+func NewRepositories(client *mongo.Client, db *mongo.Database) *repository.Repositories {
+	return &repository.Repositories{
+		User: NewUserRepository(client, db),
+	}
+}

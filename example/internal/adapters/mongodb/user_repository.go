@@ -2,8 +2,9 @@ package mongodb
 
 import (
 	"context"
+	"goserve/internal/action"
+	"goserve/internal/pagination"
 	"goserve/internal/repository"
-	"regexp"
 	"time"
 
 	"github.com/google/uuid"
@@ -28,41 +29,24 @@ func NewUserRepository(client *mongo.Client, db *mongo.Database) repository.User
 }
 
 // List implements repository.UserRepository.
-func (r *UserRepository) List(ctx context.Context, actor *repository.Actor, opts *repository.ListOptions) (*repository.ListResponse[*repository.User], error) {
-	filter := bson.D{
-		{Key: "deleted_at", Value: nil},
-	}
-	applyFilter(filter, actor)
-	if opts.Search != "" && len(UserSearchFields) > 0 {
-		for _, field := range UserSearchFields {
-			filter = append(filter, bson.E{Key: field, Value: bson.D{
-				{Key: "$regex", Value: regexp.MustCompile(opts.Search)},
-			}})
-		}
-	}
-	matchStage := bson.D{
-		{Key: "$match", Value: filter},
-	}
+func (r *UserRepository) List(ctx context.Context, actor *action.Actor, opts *pagination.Options) (*pagination.Result[*repository.User], error) {
 
-	cursor, err := r.collection.Aggregate(ctx, mongo.Pipeline{matchStage})
+	users, info, err := paginate[*User](ctx, r.collection, actor, opts)
 	if err != nil {
 		return nil, err
 	}
-	var users []*User
-	if err := cursor.All(ctx, &users); err != nil {
-		return nil, err
-	}
 	var data []*repository.User
-	for _, u := range users {
-		data = append(data, u.toRepository())
+	for _, user := range users {
+		data = append(data, user.toRepository())
 	}
-	return &repository.ListResponse[*repository.User]{
+	return &pagination.Result[*repository.User]{
 		Data: data,
+		Info: *info,
 	}, nil
 }
 
 // Create implements repository.UserRepository.
-func (r *UserRepository) Create(ctx context.Context, actor *repository.Actor, payload repository.UserFields) (*repository.User, error) {
+func (r *UserRepository) Create(ctx context.Context, actor *action.Actor, payload repository.UserFields) (*repository.User, error) {
 	fields := (UserFields)(payload)
 	user := &User{
 		UserFields: fields,
@@ -80,7 +64,7 @@ func (r *UserRepository) Create(ctx context.Context, actor *repository.Actor, pa
 }
 
 // FindByID implements repository.UserRepository.
-func (r *UserRepository) FindByID(ctx context.Context, actor *repository.Actor, id uuid.UUID) (*repository.User, error) {
+func (r *UserRepository) FindByID(ctx context.Context, actor *action.Actor, id uuid.UUID) (*repository.User, error) {
 	filter := bson.D{
 		{Key: "uid", Value: id}, {Key: "deleted_at", Value: nil},
 	}
@@ -97,7 +81,7 @@ func (r *UserRepository) FindByID(ctx context.Context, actor *repository.Actor, 
 }
 
 // UpdateByID implements repository.UserRepository.
-func (r *UserRepository) UpdateByID(ctx context.Context, actor *repository.Actor, id uuid.UUID, payload repository.UserFields) (bool, error) {
+func (r *UserRepository) UpdateByID(ctx context.Context, actor *action.Actor, id uuid.UUID, payload repository.UserFields) (bool, error) {
 	filter := bson.D{
 		{Key: "uid", Value: id}, {Key: "deleted_at", Value: nil},
 	}
@@ -115,7 +99,7 @@ func (r *UserRepository) UpdateByID(ctx context.Context, actor *repository.Actor
 }
 
 // DeleteByID implements repository.UserRepository.
-func (r *UserRepository) DeleteByID(ctx context.Context, actor *repository.Actor, id uuid.UUID) (bool, error) {
+func (r *UserRepository) DeleteByID(ctx context.Context, actor *action.Actor, id uuid.UUID) (bool, error) {
 	filter := bson.D{
 		{Key: "uid", Value: id}, {Key: "deleted_at", Value: nil},
 	}
@@ -131,7 +115,8 @@ func (r *UserRepository) DeleteByID(ctx context.Context, actor *repository.Actor
 	return true, nil
 }
 
-func (r *UserRepository) DestroyByID(ctx context.Context, actor *repository.Actor, id uuid.UUID) (bool, error) {
+// DestroyByID implements repository.UserRepository.
+func (r *UserRepository) DestroyByID(ctx context.Context, actor *action.Actor, id uuid.UUID) (bool, error) {
 	filter := bson.D{
 		{Key: "uid", Value: id}, {Key: "deleted_at", Value: nil},
 	}
@@ -141,4 +126,21 @@ func (r *UserRepository) DestroyByID(ctx context.Context, actor *repository.Acto
 		return false, err
 	}
 	return result.Acknowledged, nil
+}
+
+// RestoreByID implements repository.UserRepository.
+func (r *UserRepository) RestoreByID(ctx context.Context, actor *action.Actor, id uuid.UUID) (bool, error) {
+	filter := bson.D{
+		{Key: "uid", Value: id}, {Key: "deleted_at", Value: bson.M{"$ne": nil}},
+	}
+	applyFilter(filter, actor)
+	if _, err := r.collection.UpdateOne(ctx, filter, bson.M{"$set": bson.M{
+		"updated_at": time.Now(),
+		"updated_by": actor.UID,
+		"deleted_at": nil,
+		"deleted_by": actor.UID,
+	}}); err != nil {
+		return false, err
+	}
+	return true, nil
 }

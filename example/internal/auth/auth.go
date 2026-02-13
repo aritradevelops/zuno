@@ -1,0 +1,20 @@
+package auth
+
+import (
+	"goserve/internal/action"
+
+	"github.com/google/uuid"
+)
+
+func Authenticate(accessToken string) (*action.Actor, error) {
+	// TODO: proper jwt parsing logic
+	return &action.Actor{
+		UID: uuid.MustParse(accessToken),
+	}, nil
+}
+
+func Authorize(module string, action string, actor *action.Actor) error {
+	// TODO: proper permission checking
+	actor.Scope = "owner"
+	return nil
+}

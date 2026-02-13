@@ -2,6 +2,7 @@ package add
 
 import (
 	"fmt"
+	"go/format"
 	"goserve-cli/pkg/config"
 	"goserve-cli/pkg/logger"
 	"goserve-cli/pkg/stringx"
@@ -90,13 +91,17 @@ func addFieldToFile(module stringx.Stringx, field stringx.Stringx, fieldType str
 		tagStringFinal = fmt.Sprintf("`%s`", strings.Join(tagStrings, " "))
 	}
 
-	updated := strings.ReplaceAll(content, fieldMarker,
+	updatedContent := strings.ReplaceAll(content, fieldMarker,
 		fmt.Sprintf("%s %s %s \n\t%s", field.ModuleName(), fieldType, tagStringFinal, fieldMarker))
 
-	updated = strings.ReplaceAll(updated, mapperMarker,
+	updatedContent = strings.ReplaceAll(updatedContent, mapperMarker,
 		fmt.Sprintf("%s:%s,\n\t%s", field.ModuleName(), fmt.Sprintf("m.%s", field.ModuleName()), mapperMarker))
 
-	if err := os.WriteFile(pathToFile, []byte(updated), 0644); err != nil {
+	updated, err := format.Source([]byte(updatedContent))
+	if err != nil {
+		return err
+	}
+	if err := os.WriteFile(pathToFile, updated, 0644); err != nil {
 		return err
 	}
 	return nil

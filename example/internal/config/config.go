@@ -16,10 +16,16 @@ var k = koanf.New("_")
 type Config struct {
 	Database Database
 	Timeout  time.Duration
+	Http     Http
 }
 
 type Database struct {
 	Connection Connection
+}
+
+type Http struct {
+	Host string
+	Port int
 }
 
 type Connection struct {

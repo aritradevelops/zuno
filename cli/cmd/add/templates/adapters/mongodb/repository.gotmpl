@@ -28,7 +28,7 @@ func New{{.RepositoryName}}(client *mongo.Client, db *mongo.Database) repository
 }
 
 // List implements repository.{{.RepositoryName}}.
-func (r *{{.RepositoryName}}) List(ctx context.Context, actor *repository.Actor, opts *repository.ListOptions) (*repository.ListResponse[*repository.{{.ModuleName}}], error) {
+func (r *{{.RepositoryName}}) List(ctx context.Context, actor *action.Actor, opts *repository.ListOptions) (*repository.ListResponse[*repository.{{.ModuleName}}], error) {
 	filter := bson.D{
 		{Key: "deleted_at", Value: nil},
 	}
@@ -62,7 +62,7 @@ func (r *{{.RepositoryName}}) List(ctx context.Context, actor *repository.Actor,
 }
 
 // Create implements repository.{{.RepositoryName}}.
-func (r *{{.RepositoryName}}) Create(ctx context.Context, actor *repository.Actor, payload repository.{{.ModuleName}}Fields) (*repository.{{.ModuleName}}, error) {
+func (r *{{.RepositoryName}}) Create(ctx context.Context, actor *action.Actor, payload repository.{{.ModuleName}}Fields) (*repository.{{.ModuleName}}, error) {
 	fields := ({{.ModuleName}}Fields)(payload)
 	{{.VariableName}} := &{{.ModuleName}}{
 		{{.ModuleName}}Fields: fields,
@@ -80,7 +80,7 @@ func (r *{{.RepositoryName}}) Create(ctx context.Context, actor *repository.Acto
 }
 
 // FindByID implements repository.{{.RepositoryName}}.
-func (r *{{.RepositoryName}}) FindByID(ctx context.Context, actor *repository.Actor, id uuid.UUID) (*repository.{{.ModuleName}}, error) {
+func (r *{{.RepositoryName}}) FindByID(ctx context.Context, actor *action.Actor, id uuid.UUID) (*repository.{{.ModuleName}}, error) {
 	filter := bson.D{
 		{Key: "uid", Value: id}, {Key: "deleted_at", Value: nil},
 	}
@@ -97,7 +97,7 @@ func (r *{{.RepositoryName}}) FindByID(ctx context.Context, actor *repository.Ac
 }
 
 // UpdateByID implements repository.{{.RepositoryName}}.
-func (r *{{.RepositoryName}}) UpdateByID(ctx context.Context, actor *repository.Actor, id uuid.UUID, payload repository.{{.ModuleName}}Fields) (bool, error) {
+func (r *{{.RepositoryName}}) UpdateByID(ctx context.Context, actor *action.Actor, id uuid.UUID, payload repository.{{.ModuleName}}Fields) (bool, error) {
 	filter := bson.D{
 		{Key: "uid", Value: id}, {Key: "deleted_at", Value: nil},
 	}
@@ -115,7 +115,7 @@ func (r *{{.RepositoryName}}) UpdateByID(ctx context.Context, actor *repository.
 }
 
 // DeleteByID implements repository.{{.RepositoryName}}.
-func (r *{{.RepositoryName}}) DeleteByID(ctx context.Context, actor *repository.Actor, id uuid.UUID) (bool, error) {
+func (r *{{.RepositoryName}}) DeleteByID(ctx context.Context, actor *action.Actor, id uuid.UUID) (bool, error) {
 	filter := bson.D{
 		{Key: "uid", Value: id}, {Key: "deleted_at", Value: nil},
 	}
@@ -131,7 +131,7 @@ func (r *{{.RepositoryName}}) DeleteByID(ctx context.Context, actor *repository.
 	return true, nil
 }
 
-func (r *{{.RepositoryName}}) DestroyByID(ctx context.Context, actor *repository.Actor, id uuid.UUID) (bool, error) {
+func (r *{{.RepositoryName}}) DestroyByID(ctx context.Context, actor *action.Actor, id uuid.UUID) (bool, error) {
 	filter := bson.D{
 		{Key: "uid", Value: id}, {Key: "deleted_at", Value: nil},
 	}

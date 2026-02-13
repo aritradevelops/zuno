@@ -1,0 +1,97 @@
+package mongodb
+
+import (
+	"context"
+	"goserve/internal/action"
+	"goserve/internal/pagination"
+	"regexp"
+
+	"go.mongodb.org/mongo-driver/v2/bson"
+	"go.mongodb.org/mongo-driver/v2/mongo"
+)
+
+func applyFilter(filter bson.D, actor *action.Actor) {
+	switch actor.Scope {
+	case "owner":
+		filter = append(filter, bson.E{Key: "created_by", Value: actor.UID})
+	}
+}
+
+func getSortOrder(order pagination.SortOrder) int {
+	if order == pagination.SortOrderAscending {
+		return 1
+	}
+	return -1
+}
+
+func paginate[T any](ctx context.Context, collection *mongo.Collection, actor *action.Actor, opts *pagination.Options) ([]T, *pagination.Info, error) {
+	// build the $match stage
+	filter := bson.D{}
+	// handle trash option
+	if opts.Trash {
+		filter = append(filter, bson.E{Key: "deleted_at", Value: bson.E{
+			Key: "$ne", Value: nil,
+		}})
+	} else {
+		filter = append(filter, bson.E{
+			Key: "deleted_at", Value: nil,
+		})
+	}
+	applyFilter(filter, actor)
+	// handle search option
+	if opts.Search != "" && len(UserSearchFields) > 0 {
+		for _, field := range UserSearchFields {
+			filter = append(filter, bson.E{Key: field, Value: bson.D{
+				{Key: "$regex", Value: regexp.MustCompile(opts.Search)},
+			}})
+		}
+	}
+	matchStage := bson.D{
+		{Key: "$match", Value: filter},
+	}
+
+	// build the $sort stage
+	sortObj := bson.D{{Key: opts.SortBy, Value: getSortOrder(opts.SortOrder)}}
+	// if we are sorting based on another field then add a second priority
+	// to get consistent result
+	if opts.SortBy != "created_at" {
+		sortObj = append(sortObj, bson.E{Key: "created_at", Value: -1})
+	}
+
+	sortStage := bson.D{
+		{Key: "$sort", Value: sortObj},
+	}
+
+	// build the skip
+	skip := (opts.Page - 1) * opts.Limit
+	skipStage := bson.D{
+		{Key: "$skip", Value: skip},
+	}
+	// build the limit stage
+	limitStage := bson.D{
+		{Key: "$limit", Value: opts.Limit},
+	}
+
+	cursor, err := collection.Aggregate(ctx, mongo.Pipeline{matchStage, sortStage, skipStage, limitStage})
+	if err != nil {
+		return nil, nil, err
+	}
+
+	total, err := collection.CountDocuments(ctx, filter)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	info := &pagination.Info{
+		Total:   int(total),
+		Current: opts.Page,
+		HasNext: int(total)/opts.Limit > opts.Page,
+		HasPrev: opts.Page > 1,
+	}
+
+	var data []T
+	if err := cursor.All(ctx, &data); err != nil {
+		return nil, nil, err
+	}
+	return data, info, nil
+}

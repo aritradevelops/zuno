@@ -2,6 +2,8 @@ package repository
 
 import (
 	"context"
+	"goserve/internal/action"
+	"goserve/internal/pagination"
 	"time"
 
 	"github.com/google/uuid"
@@ -23,10 +25,11 @@ type User struct {
 }
 
 type UserRepository interface {
-	List(context.Context, *Actor, *ListOptions) (*ListResponse[*User], error)
-	Create(context.Context, *Actor, UserFields) (*User, error)
-	FindByID(context.Context, *Actor, uuid.UUID) (*User, error)
-	UpdateByID(context.Context, *Actor, uuid.UUID, UserFields) (bool, error)
-	DeleteByID(context.Context, *Actor, uuid.UUID) (bool, error)
-	DestroyByID(context.Context, *Actor, uuid.UUID) (bool, error)
+	List(context.Context, *action.Actor, *pagination.Options) (*pagination.Result[*User], error)
+	Create(context.Context, *action.Actor, UserFields) (*User, error)
+	FindByID(context.Context, *action.Actor, uuid.UUID) (*User, error)
+	UpdateByID(context.Context, *action.Actor, uuid.UUID, UserFields) (bool, error)
+	DeleteByID(context.Context, *action.Actor, uuid.UUID) (bool, error)
+	DestroyByID(context.Context, *action.Actor, uuid.UUID) (bool, error)
+	RestoreByID(context.Context, *action.Actor, uuid.UUID) (bool, error)
 }

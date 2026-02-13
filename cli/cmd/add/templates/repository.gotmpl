@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+  "goserve/internal/action"
 )
 
 type {{.ModuleName}}Fields struct {
@@ -23,11 +24,11 @@ type {{.ModuleName}} struct {
 }
 
 type {{.ModuleName}}Repository interface {
-	List(context.Context, *Actor, *ListOptions) (*ListResponse[*{{.ModuleName}}], error)
-	Create(context.Context, *Actor, {{.ModuleName}}Fields) (*{{.ModuleName}}, error)
-	FindByID(context.Context, *Actor, uuid.UUID) (*{{.ModuleName}}, error)
-	UpdateByID(context.Context, *Actor, uuid.UUID, {{.ModuleName}}Fields) (bool, error)
-	DeleteByID(context.Context, *Actor, uuid.UUID) (bool, error)
-	DestroyByID(context.Context, *Actor, uuid.UUID) (bool, error)
+	List(context.Context, *action.Actor, *ListOptions) (*ListResponse[*{{.ModuleName}}], error)
+	Create(context.Context, *action.Actor, {{.ModuleName}}Fields) (*{{.ModuleName}}, error)
+	FindByID(context.Context, *action.Actor, uuid.UUID) (*{{.ModuleName}}, error)
+	UpdateByID(context.Context, *action.Actor, uuid.UUID, {{.ModuleName}}Fields) (bool, error)
+	DeleteByID(context.Context, *action.Actor, uuid.UUID) (bool, error)
+	DestroyByID(context.Context, *action.Actor, uuid.UUID) (bool, error)
 }
 

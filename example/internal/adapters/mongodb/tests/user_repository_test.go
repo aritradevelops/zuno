@@ -2,7 +2,9 @@ package mongodb
 
 import (
 	"context"
+	"goserve/internal/action"
 	"goserve/internal/adapters/mongodb"
+	"goserve/internal/pagination"
 	"goserve/internal/repository"
 	"testing"
 
@@ -12,7 +14,7 @@ import (
 )
 
 var userRepository repository.UserRepository
-var actor = &repository.Actor{
+var actor = &action.Actor{
 	UID:   uuid.New(),
 	Scope: "owner",
 }
@@ -23,10 +25,6 @@ var userCreatePayload = repository.UserFields{
 
 var userUpdatePayload = repository.UserFields{
 	Email: "test1@gmail.com",
-}
-
-func init() {
-
 }
 
 func beforeAllUserRepositoryTests() error {
@@ -105,7 +103,7 @@ func TestUserRepository_Delete(t *testing.T) {
 	assert.NoError(t, afterAllUserRepositoryTests())
 }
 
-// it should be able to Destroy a user
+// it should be able to destroy a user
 func TestUserRepository_Destroy(t *testing.T) {
 	assert.NoError(t, beforeAllUserRepositoryTests())
 
@@ -121,7 +119,7 @@ func TestUserRepository_Destroy(t *testing.T) {
 	assert.NoError(t, afterAllUserRepositoryTests())
 }
 
-// it should be able to List users
+// it should be able to list users
 func TestUserRepository_List(t *testing.T) {
 	assert.NoError(t, beforeAllUserRepositoryTests())
 
@@ -130,9 +128,29 @@ func TestUserRepository_List(t *testing.T) {
 	_, err = userRepository.Create(context.TODO(), actor, userUpdatePayload)
 	assert.NoError(t, err)
 
-	result, err := userRepository.List(context.TODO(), actor, &repository.ListOptions{})
+	result, err := userRepository.List(context.TODO(), actor, pagination.NewOptions())
 	assert.NoError(t, err)
 	assert.Equal(t, len(result.Data), 2)
+
+	assert.NoError(t, afterAllUserRepositoryTests())
+}
+
+// should be able to restore a user
+func TestUserRepository_Restore(t *testing.T) {
+	assert.NoError(t, beforeAllUserRepositoryTests())
+
+	u, err := userRepository.Create(context.TODO(), actor, userCreatePayload)
+	assert.NoError(t, err)
+
+	_, err = userRepository.DeleteByID(context.TODO(), actor, u.UID)
+	assert.NoError(t, err)
+
+	_, err = userRepository.RestoreByID(context.TODO(), actor, u.UID)
+	assert.NoError(t, err)
+
+	u2, err := userRepository.FindByID(context.TODO(), actor, u.UID)
+	assert.NoError(t, err)
+	assert.Equal(t, u2.UID.String(), u.UID.String())
 
 	assert.NoError(t, afterAllUserRepositoryTests())
 }

@@ -5,14 +5,15 @@ import (
 	"fmt"
 	"goserve/internal/adapters/mongodb"
 	"goserve/internal/config"
-	"goserve/internal/repository"
+	"goserve/internal/service"
+	"goserve/internal/transports/http"
 	"log"
-	"time"
+	"os"
+	"os/signal"
+	"syscall"
 
-	"github.com/google/uuid"
+	"github.com/aritradevelops/billbharat/backend/shared/logger"
 )
-
-var actorId = "7e602c5d-8460-4790-b153-a4feb5ceba3a"
 
 func Run() error {
 	// load the configuration
@@ -25,48 +26,26 @@ func Run() error {
 	defer cancel()
 
 	db := mongodb.New(config.Database.Connection.Url)
-
+	log.Println("connected to database successfully!")
 	if err := db.Connect(setupCtx); err != nil {
 		return fmt.Errorf("failed to connect to database: %w", err)
 	}
-	defer db.Disconnect(context.Background())
-	log.Println("connected to database successfully!")
-	operationCtx, cancel := context.WithTimeout(context.Background(), time.Minute*2)
-	defer cancel()
-	actor := &repository.Actor{
-		UID:   uuid.MustParse(actorId),
-		Scope: "owner",
-	}
-	repo := mongodb.NewUserRepository(db.Client(), db.Database())
-	user, err := repo.Create(operationCtx, actor, repository.UserFields{
-		Email: "test4@gmail.com",
-	})
-	if err != nil {
-		return fmt.Errorf("failed to created user: %w", err)
-	}
-	log.Printf("user created successfully, %+v", user)
 
-	ok, err := repo.UpdateByID(operationCtx, actor, user.UID, repository.UserFields{
-		Email: "test44@gmail.com",
-	})
-	if err != nil {
-		return fmt.Errorf("failed to update user: %w", err)
+	repositories := mongodb.NewRepositories(db.Client(), db.Database())
+	services := service.New(repositories)
+	s := http.NewServer(config, services)
+	quitCh := make(chan os.Signal, 1)
+	signal.Notify(quitCh, syscall.SIGINT, syscall.SIGTERM)
+	go s.Start()
+	signal := <-quitCh
+	logger.Info().Str("signal", signal.String()).Msg("shutting down gracefully...")
+	if err := s.Shutdown(); err != nil {
+		logger.Info().Err(err).Msg("failed to shutdown gracefully!")
+		return err
 	}
-	log.Printf("user updated successfully, %+v", ok)
-
-	ok, err = repo.DeleteByID(operationCtx, actor, user.UID)
-	if err != nil {
-		return fmt.Errorf("failed to delete user: %w", err)
-	}
-	log.Printf("user deleted successfully, %+v", ok)
-
-	result, err := repo.List(operationCtx, actor, &repository.ListOptions{})
-	if err != nil {
-		return fmt.Errorf("failed to list user: %w", err)
-	}
-
-	for idx, u := range result.Data {
-		fmt.Printf("user %d => %+v\n", idx, u)
+	if err := db.Disconnect(context.Background()); err != nil {
+		logger.Info().Err(err).Msg("failed to close database connections gracefully!")
+		return err
 	}
 	return nil
 }
