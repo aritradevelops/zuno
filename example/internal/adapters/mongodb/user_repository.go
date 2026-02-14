@@ -19,7 +19,7 @@ type UserRepository struct {
 
 const UserCollectionName = "users"
 
-var UserSearchFields = []string{}
+var UserSearchFields = []string{"email"}
 
 func NewUserRepository(client *mongo.Client, db *mongo.Database) repository.UserRepository {
 	return &UserRepository{
@@ -35,9 +35,9 @@ func (r *UserRepository) List(ctx context.Context, actor *action.Actor, opts *pa
 	if err != nil {
 		return nil, err
 	}
-	var data []*repository.User
-	for _, user := range users {
-		data = append(data, user.toRepository())
+	data := make([]*repository.User, len(users))
+	for idx, user := range users {
+		data[idx] = user.toRepository()
 	}
 	return &pagination.Result[*repository.User]{
 		Data: data,

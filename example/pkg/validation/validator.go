@@ -23,11 +23,11 @@ func init() {
 }
 
 type ValidationError struct {
-	Message string `json:"message,omitempty"`
-	Code    string `json:"code,omitempty"`
-	Field   string `json:"field,omitempty"`
-	Value   any    `json:"value,omitempty"`
-	Param   any    `json:"param,omitempty"`
+	Message string `json:"message"`
+	Code    string `json:"code"`
+	Field   string `json:"field"`
+	Value   any    `json:"value"`
+	Param   any    `json:"param"`
 }
 
 type ValidationErrors []ValidationError

@@ -17,7 +17,7 @@ type PaginationOptions struct {
 	Search string `query:"search" json:"search"`
 	// whether to show deleted resources(only). defaults to false
 	Trash bool `query:"trash" json:"trash"`
-	// the field you want to sort the result set by. defaults to 'created_by'
+	// the field you want to sort the result set by. defaults to 'created_at'
 	SortBy string `query:"sort_by" json:"sort_by"`
 	// the sorting order. validation options are 'asc' | 'desc'. default to 'desc'
 	SortOrder pagination.SortOrder `query:"sort_order" json:"sort_order"`

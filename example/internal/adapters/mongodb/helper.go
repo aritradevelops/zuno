@@ -4,7 +4,6 @@ import (
 	"context"
 	"goserve/internal/action"
 	"goserve/internal/pagination"
-	"regexp"
 
 	"go.mongodb.org/mongo-driver/v2/bson"
 	"go.mongodb.org/mongo-driver/v2/mongo"
@@ -41,11 +40,16 @@ func paginate[T any](ctx context.Context, collection *mongo.Collection, actor *a
 	// handle search option
 	if opts.Search != "" && len(UserSearchFields) > 0 {
 		for _, field := range UserSearchFields {
-			filter = append(filter, bson.E{Key: field, Value: bson.D{
-				{Key: "$regex", Value: regexp.MustCompile(opts.Search)},
-			}})
+			filter = append(filter, bson.E{
+				Key: field,
+				Value: bson.D{
+					{Key: "$regex", Value: opts.Search},
+					{Key: "$options", Value: "i"}, // optional
+				},
+			})
 		}
 	}
+
 	matchStage := bson.D{
 		{Key: "$match", Value: filter},
 	}
@@ -88,8 +92,7 @@ func paginate[T any](ctx context.Context, collection *mongo.Collection, actor *a
 		HasNext: int(total)/opts.Limit > opts.Page,
 		HasPrev: opts.Page > 1,
 	}
-
-	var data []T
+	data := []T{}
 	if err := cursor.All(ctx, &data); err != nil {
 		return nil, nil, err
 	}

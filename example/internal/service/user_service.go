@@ -13,7 +13,7 @@ import (
 )
 
 type UserFields struct {
-	Email string `validate:"required"`
+	Email string `validate:"required,email"`
 }
 
 type User struct {
@@ -53,9 +53,9 @@ func (s *userService) List(ctx context.Context, actor *action.Actor, opts *pagin
 	if err != nil {
 		return nil, err
 	}
-	users := []*User{}
-	for _, user := range result.Data {
-		users = append(users, fromRepositoryUser(user))
+	users := make([]*User, len(result.Data))
+	for idx, user := range result.Data {
+		users[idx] = fromRepositoryUser(user)
 	}
 
 	converted := &pagination.Result[*User]{
@@ -129,7 +129,7 @@ func (s *userService) Destroy(ctx context.Context, actor *action.Actor, id uuid.
 
 // Restore implements [UserService].
 func (s *userService) Restore(ctx context.Context, actor *action.Actor, id uuid.UUID) (bool, error) {
-	ok, err := s.userRepository.DestroyByID(ctx, actor, id)
+	ok, err := s.userRepository.RestoreByID(ctx, actor, id)
 	if err != nil {
 		logger.Error().Err(err).Msg("user not found")
 		return false, err

@@ -7,7 +7,6 @@ import (
 	"goserve/internal/config"
 	"goserve/internal/service"
 	"goserve/internal/transports/http"
-	"log"
 	"os"
 	"os/signal"
 	"syscall"
@@ -21,12 +20,11 @@ func Run() error {
 	if err != nil {
 		return err
 	}
-	log.Printf("config loaded successfully, %+v", config)
 	setupCtx, cancel := context.WithTimeout(context.Background(), config.Timeout)
 	defer cancel()
 
 	db := mongodb.New(config.Database.Connection.Url)
-	log.Println("connected to database successfully!")
+	logger.Info().Msg("connected to database successfully!")
 	if err := db.Connect(setupCtx); err != nil {
 		return fmt.Errorf("failed to connect to database: %w", err)
 	}

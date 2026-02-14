@@ -54,22 +54,28 @@ func NewServer(config *config.Config, services *service.Services) *Server {
 	app.Use("/swagger/*", swaggo.HandlerDefault)
 	// Customize the UI by passing a Config
 	app.Get("/docs/*", swaggo.New(swaggo.Config{
-		URL:               "http://example.com/doc.json",
-		DeepLinking:       false,
-		DocExpansion:      "none",
-		OAuth2RedirectUrl: "http://localhost:8080/swagger/oauth2-redirect.html",
+		URL:          "http://example.com/doc.json",
+		DeepLinking:  false,
+		DocExpansion: "none",
+		// TODO:
+		// OAuth2RedirectUrl: "http://localhost:8080/swagger/oauth2-redirect.html",
 	}))
 	server := &Server{
 		config:   config,
 		app:      app,
 		handlers: handler.New(services),
 	}
+	server.setupRoutes()
 	return server
 }
 
 func (s *Server) Start() error {
-	return s.app.Listen(fmt.Sprintf("%s:%d", s.config.Http.Host, s.config.Http.Port))
+	return s.app.Listen(s.listenAddr())
 }
 func (s *Server) Shutdown() error {
 	return s.app.Shutdown()
+}
+
+func (s *Server) listenAddr() string {
+	return fmt.Sprintf("%s:%d", s.config.Http.Host, s.config.Http.Port)
 }

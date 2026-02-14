@@ -7,15 +7,19 @@ import (
 	"goserve/pkg/logger"
 	"time"
 
+	"goserve/internal/transports/http/translation"
+
 	"github.com/gofiber/fiber/v3"
 	"github.com/google/uuid"
 )
 
+var UserHandlerInfo = map[string]string{
+	"Module": "User",
+}
+
 type UserHandler struct {
 	userService service.UserService
 }
-
-var e = fiber.Error{}
 
 func NewUserHandler(userService service.UserService) *UserHandler {
 	return &UserHandler{
@@ -61,15 +65,16 @@ func (h *UserHandler) List(c fiber.Ctx) error {
 	if err != nil {
 		return err
 	}
-	var users []*User
-	for _, user := range result.Data {
-		users = append(users, fromServiceUser(user))
+	users := make([]*User, len(result.Data))
+	logger.Info().Any("users", users).Msg("users")
+	for idx, user := range result.Data {
+		users[idx] = fromServiceUser(user)
 	}
 	response := PaginatedResponse[*User]{
 		Data: users,
 		Info: PaginationInfo(result.Info),
 	}
-	return c.JSON(SuccessWithInfo("controller.list", response.Data, response.Info))
+	return c.JSON(SuccessWithInfo(translation.Localize(c, "controller.list", UserHandlerInfo), response.Data, response.Info))
 }
 
 // Create godoc
@@ -95,7 +100,7 @@ func (h *UserHandler) Create(c fiber.Ctx) error {
 	if err != nil {
 		return err
 	}
-	return c.JSON(Success("controller.create", fromServiceUser(user)))
+	return c.JSON(Success(translation.Localize(c, "controller.create", UserHandlerInfo), fromServiceUser(user)))
 }
 
 // Update godoc
@@ -126,7 +131,7 @@ func (h *UserHandler) Update(c fiber.Ctx) error {
 	if err != nil {
 		return err
 	}
-	return c.JSON(Success("controller.update", ok))
+	return c.JSON(Success(translation.Localize(c, "controller.update", UserHandlerInfo), ok))
 }
 
 // View godoc
@@ -152,7 +157,7 @@ func (h *UserHandler) View(c fiber.Ctx) error {
 	if err != nil {
 		return err
 	}
-	return c.JSON(Success("controller.view", fromServiceUser(user)))
+	return c.JSON(Success(translation.Localize(c, "controller.view", UserHandlerInfo), fromServiceUser(user)))
 }
 
 // Delete godoc
@@ -178,7 +183,7 @@ func (h *UserHandler) Delete(c fiber.Ctx) error {
 	if err != nil {
 		return err
 	}
-	return c.JSON(Success("controller.delete", ok))
+	return c.JSON(Success(translation.Localize(c, "controller.delete", UserHandlerInfo), ok))
 }
 
 // Destroy godoc
@@ -204,7 +209,7 @@ func (h *UserHandler) Destroy(c fiber.Ctx) error {
 	if err != nil {
 		return err
 	}
-	return c.JSON(Success("controller.destroy", ok))
+	return c.JSON(Success(translation.Localize(c, "controller.destroy", UserHandlerInfo), ok))
 }
 
 // Restore godoc
@@ -230,7 +235,7 @@ func (h *UserHandler) Restore(c fiber.Ctx) error {
 	if err != nil {
 		return err
 	}
-	return c.JSON(Success("controller.restore", ok))
+	return c.JSON(Success(translation.Localize(c, "controller.restore", UserHandlerInfo), ok))
 }
 
 func fromServiceUser(user *service.User) *User {
