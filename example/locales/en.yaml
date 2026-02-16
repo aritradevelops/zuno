@@ -8,6 +8,13 @@ errors:
   "500": "Sorry! Something went wrong."
   "409": "Sorry! This request conflicts with the resource!"
   "429": "Too many requests!"
+  "400": "Invalid request format or parameters"
+  "401": "Authentication required"
+  "403": "Access denied"
+  "404": "Resource not found"
+  "409": "Conflict - resource already exists"
+  "422": "Validation failed"
+  "500": "Internal server error"
 # handler actions
 controller:
   list: "{{.Module}}(s) fetched successfully."

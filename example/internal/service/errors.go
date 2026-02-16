@@ -1,46 +1,166 @@
 package service
 
-import "fmt"
+import (
+	"errors"
+	"fmt"
+	"goserve/internal/repository"
+	"time"
+)
 
-const ()
-
-type Error interface {
-	Long() string
-	Short() string
-	Code() int
-	error
+// ServiceError represents errors that occur at the business logic layer
+type ServiceError struct {
+	Code    ServiceErrorCode
+	Message string
+	Cause   error
+	Details map[string]any
 }
 
-type serviceError struct {
-	long  string
-	short string
-	code  int
+type ServiceErrorCode string
+
+const (
+	// Validation
+	ErrValidationFailed ServiceErrorCode = "VALIDATION_FAILED"
+
+	// State & lifecycle errors
+	ErrAlreadyExists    ServiceErrorCode = "ALREADY_EXISTS"
+	ErrNotFound         ServiceErrorCode = "NOT_FOUND"
+	ErrOperationBlocked ServiceErrorCode = "OPERATION_BLOCKED"
+
+	// Authorization & permissions
+	ErrUnauthorized ServiceErrorCode = "UNAUTHORIZED"
+	ErrForbidden    ServiceErrorCode = "FORBIDDEN"
+
+	// Dependencies & orchestration
+	ErrExternalService ServiceErrorCode = "EXTERNAL_SERVICE_ERROR"
+	ErrTimeout         ServiceErrorCode = "SERVICE_TIMEOUT"
+
+	// Internal
+	ErrInternal ServiceErrorCode = "INTERNAL_SERVICE_ERROR"
+)
+
+func (e *ServiceError) Error() string {
+	if e.Cause != nil {
+		return fmt.Sprintf("Service Error [%s]: %s. Caused by: %v", e.Code, e.Message, e.Cause)
+	}
+	return fmt.Sprintf("Service Error [%s]: %s", e.Code, e.Message)
 }
 
-func NewError(code int, long string, short string) Error {
-	return &serviceError{
-		long:  long,
-		short: short,
-		code:  code,
+func (e *ServiceError) Unwrap() error {
+	return e.Cause
+}
+func NewValidationError(message string, details map[string]any) *ServiceError {
+	return &ServiceError{
+		Code:    ErrValidationFailed,
+		Message: message,
+		Details: details,
 	}
 }
 
-// Code implements [Error].
-func (s *serviceError) Code() int {
-	return s.code
+func NewAlreadyExistsError(resource, key string) *ServiceError {
+	return &ServiceError{
+		Code:    ErrAlreadyExists,
+		Message: fmt.Sprintf("%s already exists with key %s", resource, key),
+		Details: map[string]any{
+			"resource": resource,
+			"key":      key,
+		},
+	}
 }
 
-// Long implements [Error].
-func (s *serviceError) Long() string {
-	return s.long
+func NewServiceNotFoundError(resource, id string) *ServiceError {
+	return &ServiceError{
+		Code:    ErrNotFound,
+		Message: fmt.Sprintf("%s with ID %s not found", resource, id),
+		Details: map[string]any{
+			"resource": resource,
+			"id":       id,
+		},
+	}
 }
 
-// Short implements [Error].
-func (s *serviceError) Short() string {
-	return s.short
+func NewOperationBlockedError(reason string, details map[string]any) *ServiceError {
+	return &ServiceError{
+		Code:    ErrOperationBlocked,
+		Message: reason,
+		Details: details,
+	}
+}
+func NewUnauthorizedError() *ServiceError {
+	return &ServiceError{
+		Code:    ErrUnauthorized,
+		Message: "Unauthorized",
+	}
 }
 
-// Error implements [Error].
-func (s *serviceError) Error() string {
-	return fmt.Sprintf("Code: %d, Error: %s", s.code, s.long)
+func NewForbiddenError(actor, action, resource string) *ServiceError {
+	return &ServiceError{
+		Code:    ErrForbidden,
+		Message: fmt.Sprintf("Actor %s cannot %s %s", actor, action, resource),
+		Details: map[string]any{
+			"actor":    actor,
+			"action":   action,
+			"resource": resource,
+		},
+	}
+}
+
+func NewExternalServiceError(service string, cause error) *ServiceError {
+	return &ServiceError{
+		Code:    ErrExternalService,
+		Message: fmt.Sprintf("External service error: %s", service),
+		Cause:   cause,
+	}
+}
+
+func NewServiceTimeout(operation string, timeout time.Duration) *ServiceError {
+	return &ServiceError{
+		Code:    ErrTimeout,
+		Message: fmt.Sprintf("Service operation '%s' timed out after %v", operation, timeout),
+		Details: map[string]any{
+			"operation": operation,
+			"timeout":   timeout.String(),
+		},
+	}
+}
+func NewInternalError(message string, cause error) *ServiceError {
+	return &ServiceError{
+		Code:    ErrInternal,
+		Message: message,
+		Cause:   cause,
+	}
+}
+func IsServiceError(err error) bool {
+	var se *ServiceError
+	return errors.As(err, &se)
+}
+
+func HasCode(err error, code ServiceErrorCode) bool {
+	var se *ServiceError
+	if !errors.As(err, &se) {
+		return false
+	}
+	return se.Code == code
+}
+
+func IsNotFound(err error) bool {
+	return HasCode(err, ErrNotFound)
+}
+
+func IsValidationError(err error) bool {
+	return HasCode(err, ErrValidationFailed)
+}
+
+func IsForbidden(err error) bool {
+	return HasCode(err, ErrForbidden)
+}
+
+func ConvertRepositoryError(err error) error {
+	var repoErr *repository.RepositoryError
+	if errors.As(err, &repoErr) {
+		switch repoErr.Code {
+		case repository.ErrAccessDenied:
+			return NewUnauthorizedError()
+		}
+	}
+	return NewInternalError("unknown error occurred", err)
 }

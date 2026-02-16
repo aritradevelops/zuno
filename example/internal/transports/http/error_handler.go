@@ -3,6 +3,8 @@ package http
 import (
 	"errors"
 	"fmt"
+	"goserve/internal/repository"
+	"goserve/internal/service"
 	"goserve/internal/transports/http/handler"
 	"goserve/internal/transports/http/translation"
 	"goserve/pkg/logger"
@@ -14,6 +16,29 @@ import (
 	"github.com/gobeam/stringy"
 	"github.com/gofiber/fiber/v3"
 )
+
+func getHTTPStatusForServiceError(err service.Error) int {
+	if err == nil {
+		return 200
+	}
+
+	switch err.Code() {
+	case service.ErrResourceNotFound:
+		return httpb.StatusNotFound
+	case service.ErrResourceAlreadyExists:
+		return httpb.StatusConflict
+	case service.ErrResourceInvalidData:
+		return httpb.StatusUnprocessableEntity
+	case service.ErrResourceAccessDenied:
+		return httpb.StatusForbidden
+	case service.ErrResourceDeleteFailed, service.ErrResourceUpdateFailed, service.ErrResourceCreateFailed, service.ErrResourceListFailed, service.ErrResourceRestoreFailed:
+		return httpb.StatusInternalServerError
+	case service.ErrServiceInternal, service.ErrServiceTimeout, service.ErrServiceUnavailable:
+		return httpb.StatusInternalServerError
+	default:
+		return httpb.StatusInternalServerError
+	}
+}
 
 func ErrorHandler() fiber.ErrorHandler {
 	return func(c fiber.Ctx, e error) error {
@@ -32,6 +57,34 @@ func ErrorHandler() fiber.ErrorHandler {
 			}
 			c.Status(httpb.StatusUnprocessableEntity)
 			return c.JSON(handler.Failure(translation.Localize(c, "errors.422"), finalError))
+		}
+
+		// Handle service errors
+		var serviceErr service.Error
+		if service.AsServiceError(e, &serviceErr) {
+			httpStatus := getHTTPStatusForServiceError(serviceErr)
+			c.Status(httpStatus)
+			return c.JSON(handler.Failure(translation.Localize(c, fmt.Sprintf("errors.%d", httpStatus)), serviceErr.Long()))
+		}
+
+		// Handle repository errors
+		var repoErr *repository.RepositoryError
+		if repository.IsRepositoryError(e) {
+			if errors.As(e, &repoErr) {
+				httpStatus := httpb.StatusInternalServerError
+				switch repoErr.Code {
+				case repository.ErrDatabaseNotFound:
+					httpStatus = httpb.StatusNotFound
+				case repository.ErrDuplicateEntry:
+					httpStatus = httpb.StatusConflict
+				case repository.ErrAccessDenied:
+					httpStatus = httpb.StatusForbidden
+				case repository.ErrInvalidData:
+					httpStatus = httpb.StatusUnprocessableEntity
+				}
+				c.Status(httpStatus)
+				return c.JSON(handler.Failure(translation.Localize(c, fmt.Sprintf("errors.%d", httpStatus)), repoErr.Message))
+			}
 		}
 
 		maskedError := fmt.Errorf("something went wrong")

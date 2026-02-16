@@ -30,10 +30,9 @@ func NewUserRepository(client *mongo.Client, db *mongo.Database) repository.User
 
 // List implements repository.UserRepository.
 func (r *UserRepository) List(ctx context.Context, actor *action.Actor, opts *pagination.Options) (*pagination.Result[*repository.User], error) {
-
 	users, info, err := paginate[*User](ctx, r.collection, actor, opts)
 	if err != nil {
-		return nil, err
+		return nil, repository.NewDatabaseQueryError("list users", err)
 	}
 	data := make([]*repository.User, len(users))
 	for idx, user := range users {
@@ -58,7 +57,7 @@ func (r *UserRepository) Create(ctx context.Context, actor *action.Actor, payloa
 	user.UpdatedBy = actor.UID
 
 	if _, err := r.collection.InsertOne(ctx, user); err != nil {
-		return nil, err
+		return nil, repository.NewDatabaseInsertError("create user", err)
 	}
 	return user.toRepository(), nil
 }
@@ -71,11 +70,14 @@ func (r *UserRepository) FindByID(ctx context.Context, actor *action.Actor, id u
 	applyFilter(filter, actor)
 	result := r.collection.FindOne(ctx, filter)
 	if result.Err() != nil {
-		return nil, result.Err()
+		if result.Err() == mongo.ErrNoDocuments {
+			return nil, repository.NewNotFoundError("User", id.String())
+		}
+		return nil, repository.NewDatabaseQueryError("find user by ID", result.Err())
 	}
 	var user *User
 	if err := result.Decode(&user); err != nil {
-		return nil, err
+		return nil, repository.NewDatabaseQueryError("decode user", err)
 	}
 	return user.toRepository(), nil
 }
@@ -87,13 +89,17 @@ func (r *UserRepository) UpdateByID(ctx context.Context, actor *action.Actor, id
 	}
 	dataMap, err := (UserFields)(payload).toMap()
 	if err != nil {
-		return false, err
+		return false, repository.NewInvalidDataError("Invalid user data", map[string]any{"field": "payload", "value": payload})
 	}
 	applyFilter(filter, actor)
 	dataMap["updated_at"] = time.Now()
 	dataMap["updated_by"] = actor.UID
-	if _, err := r.collection.UpdateOne(ctx, filter, bson.M{"$set": dataMap}); err != nil {
-		return false, err
+	result, err := r.collection.UpdateOne(ctx, filter, bson.M{"$set": dataMap})
+	if err != nil {
+		return false, repository.NewDatabaseUpdateError("update user", err)
+	}
+	if result.ModifiedCount == 0 {
+		return false, repository.NewNotFoundError("User", id.String())
 	}
 	return true, nil
 }
@@ -104,13 +110,17 @@ func (r *UserRepository) DeleteByID(ctx context.Context, actor *action.Actor, id
 		{Key: "uid", Value: id}, {Key: "deleted_at", Value: nil},
 	}
 	applyFilter(filter, actor)
-	if _, err := r.collection.UpdateOne(ctx, filter, bson.M{"$set": bson.M{
+	result, err := r.collection.UpdateOne(ctx, filter, bson.M{"$set": bson.M{
 		"updated_at": time.Now(),
 		"updated_by": actor.UID,
 		"deleted_at": time.Now(),
 		"deleted_by": actor.UID,
-	}}); err != nil {
-		return false, err
+	}})
+	if err != nil {
+		return false, repository.NewDatabaseUpdateError("delete user", err)
+	}
+	if result.ModifiedCount == 0 {
+		return false, repository.NewNotFoundError("User", id.String())
 	}
 	return true, nil
 }
@@ -123,7 +133,10 @@ func (r *UserRepository) DestroyByID(ctx context.Context, actor *action.Actor, i
 	applyFilter(filter, actor)
 	result, err := r.collection.DeleteOne(ctx, filter)
 	if err != nil {
-		return false, err
+		return false, repository.NewDatabaseDeleteError("destroy user", err)
+	}
+	if result.DeletedCount == 0 {
+		return false, repository.NewNotFoundError("User", id.String())
 	}
 	return result.Acknowledged, nil
 }
@@ -134,13 +147,17 @@ func (r *UserRepository) RestoreByID(ctx context.Context, actor *action.Actor, i
 		{Key: "uid", Value: id}, {Key: "deleted_at", Value: bson.M{"$ne": nil}},
 	}
 	applyFilter(filter, actor)
-	if _, err := r.collection.UpdateOne(ctx, filter, bson.M{"$set": bson.M{
+	result, err := r.collection.UpdateOne(ctx, filter, bson.M{"$set": bson.M{
 		"updated_at": time.Now(),
 		"updated_by": actor.UID,
 		"deleted_at": nil,
 		"deleted_by": actor.UID,
-	}}); err != nil {
-		return false, err
+	}})
+	if err != nil {
+		return false, repository.NewDatabaseUpdateError("restore user", err)
+	}
+	if result.ModifiedCount == 0 {
+		return false, repository.NewNotFoundError("User", id.String())
 	}
 	return true, nil
 }

@@ -50,6 +50,9 @@ type User struct {
 // @Produce      json
 // @Param        options query PaginationOptions false "options for listing customization"
 // @Success      200 {object} Response[[]User, PaginationInfo , NoError]
+// @Failure      401 {object} Response[NoData, NoInfo, string]
+// @Failure      403 {object} Response[NoData, NoInfo, string]
+// @Failure      500 {object} Response[NoData, NoInfo, string]
 // @Router       /users/list [get]
 func (h *UserHandler) List(c fiber.Ctx) error {
 	opts := (*PaginationOptions)(pagination.NewOptions())
@@ -59,11 +62,17 @@ func (h *UserHandler) List(c fiber.Ctx) error {
 	actor, err := middlewares.GetActor(c)
 	if err != nil {
 		logger.Error().Err(err).Msg("can't get actor")
-		return fiber.ErrUnauthorized
+		return c.Status(fiber.StatusUnauthorized).JSON(Failure(translation.Localize(c, "errors.401"), "Unauthorized"))
 	}
 	result, err := h.userService.List(c.Context(), actor, (*pagination.Options)(opts))
 	if err != nil {
-		return err
+		var serviceErr service.Error
+		if service.AsServiceError(err, &serviceErr) {
+			return err // Return service error as-is for middleware handling
+		}
+		logger.Error().Err(err).Msg("failed to list users")
+		c.Status(fiber.StatusInternalServerError)
+		return c.JSON(Failure(translation.Localize(c, "errors.500"), "Internal server error"))
 	}
 	users := make([]*User, len(result.Data))
 	logger.Info().Any("users", users).Msg("users")
@@ -84,7 +93,12 @@ func (h *UserHandler) List(c fiber.Ctx) error {
 // @Accept       json
 // @Produce      json
 // @Param        request body UserFields true "create user payload"
-// @Success      200 {object} Response[User, NoInfo, NoError]
+// @Success      201 {object} Response[User, NoInfo, NoError]
+// @Failure      400 {object} Response[NoData, NoInfo, map[string]validation.ValidationError]
+// @Failure      401 {object} Response[NoData, NoInfo, string]
+// @Failure      409 {object} Response[NoData, NoInfo, string]
+// @Failure      422 {object} Response[NoData, NoInfo, string]
+// @Failure      500 {object} Response[NoData, NoInfo, string]
 // @Router       /users/create [post]
 func (h *UserHandler) Create(c fiber.Ctx) error {
 	var payload UserFields
@@ -94,12 +108,19 @@ func (h *UserHandler) Create(c fiber.Ctx) error {
 	actor, err := middlewares.GetActor(c)
 	if err != nil {
 		logger.Error().Err(err).Msg("can't get actor")
-		return fiber.ErrUnauthorized
+		return c.Status(fiber.StatusUnauthorized).JSON(Failure(translation.Localize(c, "errors.401"), "Unauthorized"))
 	}
 	user, err := h.userService.Create(c.Context(), actor, service.UserFields(payload))
 	if err != nil {
-		return err
+		var serviceErr service.Error
+		if service.AsServiceError(err, &serviceErr) {
+			return err // Return service error as-is for middleware handling
+		}
+		logger.Error().Err(err).Msg("failed to create user")
+		c.Status(fiber.StatusInternalServerError)
+		return c.JSON(Failure(translation.Localize(c, "errors.500"), "Internal server error"))
 	}
+	c.Status(fiber.StatusCreated)
 	return c.JSON(Success(translation.Localize(c, "controller.create", UserHandlerInfo), fromServiceUser(user)))
 }
 
@@ -112,11 +133,16 @@ func (h *UserHandler) Create(c fiber.Ctx) error {
 // @Param        request body UserFields true "update user payload"
 // @Param 			 id path string true "id of the user"
 // @Success      200 {object} Response[bool, NoInfo, NoError]
+// @Failure      400 {object} Response[NoData, NoInfo, map[string]validation.ValidationError]
+// @Failure      401 {object} Response[NoData, NoInfo, string]
+// @Failure      404 {object} Response[NoData, NoInfo, string]
+// @Failure      422 {object} Response[NoData, NoInfo, string]
+// @Failure      500 {object} Response[NoData, NoInfo, string]
 // @Router       /users/update/{id} [put]
 func (h *UserHandler) Update(c fiber.Ctx) error {
 	uid, err := uuid.Parse(c.Params("id"))
 	if err != nil {
-		return err
+		return c.Status(fiber.StatusBadRequest).JSON(Failure(translation.Localize(c, "errors.400"), "Invalid user ID"))
 	}
 	var payload UserFields
 	if err := c.Bind().Body(&payload); err != nil {
@@ -125,11 +151,17 @@ func (h *UserHandler) Update(c fiber.Ctx) error {
 	actor, err := middlewares.GetActor(c)
 	if err != nil {
 		logger.Error().Err(err).Msg("can't get actor")
-		return fiber.ErrUnauthorized
+		return c.Status(fiber.StatusUnauthorized).JSON(Failure(translation.Localize(c, "errors.401"), "Unauthorized"))
 	}
 	ok, err := h.userService.Update(c.Context(), actor, uid, service.UserFields(payload))
 	if err != nil {
-		return err
+		var serviceErr service.Error
+		if service.AsServiceError(err, &serviceErr) {
+			return err // Return service error as-is for middleware handling
+		}
+		logger.Error().Err(err).Msg("failed to update user")
+		c.Status(fiber.StatusInternalServerError)
+		return c.JSON(Failure(translation.Localize(c, "errors.500"), "Internal server error"))
 	}
 	return c.JSON(Success(translation.Localize(c, "controller.update", UserHandlerInfo), ok))
 }
@@ -142,20 +174,29 @@ func (h *UserHandler) Update(c fiber.Ctx) error {
 // @Produce      json
 // @Param 			 id path string true "id of the user"
 // @Success      200 {object} Response[User, NoInfo, NoError]
+// @Failure      401 {object} Response[NoData, NoInfo, string]
+// @Failure      404 {object} Response[NoData, NoInfo, string]
+// @Failure      500 {object} Response[NoData, NoInfo, string]
 // @Router       /users/view/{id} [get]
 func (h *UserHandler) View(c fiber.Ctx) error {
 	uid, err := uuid.Parse(c.Params("id"))
 	if err != nil {
-		return err
+		return c.Status(fiber.StatusBadRequest).JSON(Failure(translation.Localize(c, "errors.400"), "Invalid user ID"))
 	}
 	actor, err := middlewares.GetActor(c)
 	if err != nil {
 		logger.Error().Err(err).Msg("can't get actor")
-		return fiber.ErrUnauthorized
+		return c.Status(fiber.StatusUnauthorized).JSON(Failure(translation.Localize(c, "errors.401"), "Unauthorized"))
 	}
 	user, err := h.userService.View(c.Context(), actor, uid)
 	if err != nil {
-		return err
+		var serviceErr service.Error
+		if service.AsServiceError(err, &serviceErr) {
+			return err // Return service error as-is for middleware handling
+		}
+		logger.Error().Err(err).Msg("failed to view user")
+		c.Status(fiber.StatusInternalServerError)
+		return c.JSON(Failure(translation.Localize(c, "errors.500"), "Internal server error"))
 	}
 	return c.JSON(Success(translation.Localize(c, "controller.view", UserHandlerInfo), fromServiceUser(user)))
 }
@@ -168,20 +209,29 @@ func (h *UserHandler) View(c fiber.Ctx) error {
 // @Produce      json
 // @Param 			 id path string true "id of the user"
 // @Success      200 {object} Response[bool, NoInfo, NoError]
+// @Failure      401 {object} Response[NoData, NoInfo, string]
+// @Failure      404 {object} Response[NoData, NoInfo, string]
+// @Failure      500 {object} Response[NoData, NoInfo, string]
 // @Router       /users/delete/{id} [delete]
 func (h *UserHandler) Delete(c fiber.Ctx) error {
 	uid, err := uuid.Parse(c.Params("id"))
 	if err != nil {
-		return err
+		return c.Status(fiber.StatusBadRequest).JSON(Failure(translation.Localize(c, "errors.400"), "Invalid user ID"))
 	}
 	actor, err := middlewares.GetActor(c)
 	if err != nil {
 		logger.Error().Err(err).Msg("can't get actor")
-		return fiber.ErrUnauthorized
+		return c.Status(fiber.StatusUnauthorized).JSON(Failure(translation.Localize(c, "errors.401"), "Unauthorized"))
 	}
 	ok, err := h.userService.Delete(c.Context(), actor, uid)
 	if err != nil {
-		return err
+		var serviceErr service.Error
+		if service.AsServiceError(err, &serviceErr) {
+			return err // Return service error as-is for middleware handling
+		}
+		logger.Error().Err(err).Msg("failed to delete user")
+		c.Status(fiber.StatusInternalServerError)
+		return c.JSON(Failure(translation.Localize(c, "errors.500"), "Internal server error"))
 	}
 	return c.JSON(Success(translation.Localize(c, "controller.delete", UserHandlerInfo), ok))
 }
@@ -194,20 +244,29 @@ func (h *UserHandler) Delete(c fiber.Ctx) error {
 // @Produce      json
 // @Param 			 id path string true "id of the user"
 // @Success      200 {object} Response[bool, NoInfo, NoError]
+// @Failure      401 {object} Response[NoData, NoInfo, string]
+// @Failure      404 {object} Response[NoData, NoInfo, string]
+// @Failure      500 {object} Response[NoData, NoInfo, string]
 // @Router       /users/destroy/{id} [delete]
 func (h *UserHandler) Destroy(c fiber.Ctx) error {
 	uid, err := uuid.Parse(c.Params("id"))
 	if err != nil {
-		return err
+		return c.Status(fiber.StatusBadRequest).JSON(Failure(translation.Localize(c, "errors.400"), "Invalid user ID"))
 	}
 	actor, err := middlewares.GetActor(c)
 	if err != nil {
 		logger.Error().Err(err).Msg("can't get actor")
-		return fiber.ErrUnauthorized
+		return c.Status(fiber.StatusUnauthorized).JSON(Failure(translation.Localize(c, "errors.401"), "Unauthorized"))
 	}
 	ok, err := h.userService.Destroy(c.Context(), actor, uid)
 	if err != nil {
-		return err
+		var serviceErr service.Error
+		if service.AsServiceError(err, &serviceErr) {
+			return err // Return service error as-is for middleware handling
+		}
+		logger.Error().Err(err).Msg("failed to destroy user")
+		c.Status(fiber.StatusInternalServerError)
+		return c.JSON(Failure(translation.Localize(c, "errors.500"), "Internal server error"))
 	}
 	return c.JSON(Success(translation.Localize(c, "controller.destroy", UserHandlerInfo), ok))
 }
@@ -220,20 +279,29 @@ func (h *UserHandler) Destroy(c fiber.Ctx) error {
 // @Produce      json
 // @Param 			 id path string true "id of the user"
 // @Success      200 {object} Response[bool, NoInfo, NoError]
+// @Failure      401 {object} Response[NoData, NoInfo, string]
+// @Failure      404 {object} Response[NoData, NoInfo, string]
+// @Failure      500 {object} Response[NoData, NoInfo, string]
 // @Router       /users/restore/{id} [patch]
 func (h *UserHandler) Restore(c fiber.Ctx) error {
 	uid, err := uuid.Parse(c.Params("id"))
 	if err != nil {
-		return err
+		return c.Status(fiber.StatusBadRequest).JSON(Failure(translation.Localize(c, "errors.400"), "Invalid user ID"))
 	}
 	actor, err := middlewares.GetActor(c)
 	if err != nil {
 		logger.Error().Err(err).Msg("can't get actor")
-		return fiber.ErrUnauthorized
+		return c.Status(fiber.StatusUnauthorized).JSON(Failure(translation.Localize(c, "errors.401"), "Unauthorized"))
 	}
 	ok, err := h.userService.Restore(c.Context(), actor, uid)
 	if err != nil {
-		return err
+		var serviceErr service.Error
+		if service.AsServiceError(err, &serviceErr) {
+			return err // Return service error as-is for middleware handling
+		}
+		logger.Error().Err(err).Msg("failed to restore user")
+		c.Status(fiber.StatusInternalServerError)
+		return c.JSON(Failure(translation.Localize(c, "errors.500"), "Internal server error"))
 	}
 	return c.JSON(Success(translation.Localize(c, "controller.restore", UserHandlerInfo), ok))
 }

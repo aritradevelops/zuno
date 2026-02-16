@@ -51,7 +51,8 @@ func NewUserService(userRepository repository.UserRepository) UserService {
 func (s *userService) List(ctx context.Context, actor *action.Actor, opts *pagination.Options) (*pagination.Result[*User], error) {
 	result, err := s.userRepository.List(ctx, actor, opts)
 	if err != nil {
-		return nil, err
+		logger.Error().Err(err).Msg("failed to list users")
+		return nil, ConvertRepositoryError(err)
 	}
 	users := make([]*User, len(result.Data))
 	for idx, user := range result.Data {
@@ -69,12 +70,12 @@ func (s *userService) List(ctx context.Context, actor *action.Actor, opts *pagin
 func (s *userService) Create(ctx context.Context, actor *action.Actor, payload UserFields) (*User, error) {
 	if err := validation.Validate(payload); err != nil {
 		logger.Error().Err(err).Msg("validation failed")
-		return nil, err
+		return nil, NewUserInvalidDataError("Invalid user data provided")
 	}
 	user, err := s.userRepository.Create(ctx, actor, repository.UserFields(payload))
 	if err != nil {
 		logger.Error().Err(err).Msg("failed to create user")
-		return nil, err
+		return nil, ConvertRepositoryError(err)
 	}
 	logger.Info().Msg("user created successfully!")
 	return fromRepositoryUser(user), nil
@@ -84,12 +85,12 @@ func (s *userService) Create(ctx context.Context, actor *action.Actor, payload U
 func (s *userService) Update(ctx context.Context, actor *action.Actor, id uuid.UUID, payload UserFields) (bool, error) {
 	if err := validation.Validate(payload); err != nil {
 		logger.Error().Err(err).Msg("validation failed")
-		return false, err
+		return false, NewUserInvalidDataError("Invalid user data provided")
 	}
 	ok, err := s.userRepository.UpdateByID(ctx, actor, id, repository.UserFields(payload))
 	if err != nil {
 		logger.Error().Err(err).Msg("failed to update user")
-		return false, err
+		return false, ConvertRepositoryError(err)
 	}
 	logger.Info().Msg("user updated successfully!")
 	return ok, nil
@@ -100,7 +101,7 @@ func (s *userService) View(ctx context.Context, actor *action.Actor, id uuid.UUI
 	user, err := s.userRepository.FindByID(ctx, actor, id)
 	if err != nil {
 		logger.Error().Err(err).Msg("user not found")
-		return nil, err
+		return nil, ConvertRepositoryError(err)
 	}
 	return fromRepositoryUser(user), nil
 }
@@ -109,8 +110,8 @@ func (s *userService) View(ctx context.Context, actor *action.Actor, id uuid.UUI
 func (s *userService) Delete(ctx context.Context, actor *action.Actor, id uuid.UUID) (bool, error) {
 	ok, err := s.userRepository.DeleteByID(ctx, actor, id)
 	if err != nil {
-		logger.Error().Err(err).Msg("user not found")
-		return false, err
+		logger.Error().Err(err).Msg("failed to delete user")
+		return false, ConvertRepositoryError(err)
 	}
 	logger.Info().Msg("user deleted successfully")
 	return ok, nil
@@ -120,8 +121,8 @@ func (s *userService) Delete(ctx context.Context, actor *action.Actor, id uuid.U
 func (s *userService) Destroy(ctx context.Context, actor *action.Actor, id uuid.UUID) (bool, error) {
 	ok, err := s.userRepository.DestroyByID(ctx, actor, id)
 	if err != nil {
-		logger.Error().Err(err).Msg("user not found")
-		return false, err
+		logger.Error().Err(err).Msg("failed to destroy user")
+		return false, ConvertRepositoryError(err)
 	}
 	logger.Info().Msg("user destroyed successfully")
 	return ok, nil
@@ -131,8 +132,8 @@ func (s *userService) Destroy(ctx context.Context, actor *action.Actor, id uuid.
 func (s *userService) Restore(ctx context.Context, actor *action.Actor, id uuid.UUID) (bool, error) {
 	ok, err := s.userRepository.RestoreByID(ctx, actor, id)
 	if err != nil {
-		logger.Error().Err(err).Msg("user not found")
-		return false, err
+		logger.Error().Err(err).Msg("failed to restore user")
+		return false, ConvertRepositoryError(err)
 	}
 	logger.Info().Msg("user restored successfully")
 	return ok, nil
