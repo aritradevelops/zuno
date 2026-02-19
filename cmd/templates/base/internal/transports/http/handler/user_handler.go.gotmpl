@@ -1,13 +1,13 @@
 package handler
 
 import (
-	"goserve/internal/pagination"
-	"goserve/internal/service"
-	"goserve/internal/transports/http/middlewares"
-	"goserve/pkg/logger"
+	"{{.PackageName}}/internal/pagination"
+	"{{.PackageName}}/internal/service"
+	"{{.PackageName}}/internal/transports/http/middlewares"
+	"{{.PackageName}}/pkg/logger"
 	"time"
 
-	"goserve/internal/transports/http/translation"
+	"{{.PackageName}}/internal/transports/http/translation"
 
 	"github.com/gofiber/fiber/v3"
 	"github.com/google/uuid"
