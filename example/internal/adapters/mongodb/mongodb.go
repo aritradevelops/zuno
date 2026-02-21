@@ -19,17 +19,17 @@ type MongoDB struct {
 	db            *mongo.Database
 }
 
-func New(connectionUrl string) *MongoDB {
+func New(connectionUrl string) (*MongoDB, error) {
 	raw, err := url.Parse(connectionUrl)
 	if err != nil {
-		panic(fmt.Errorf("mongodb connection url is invalid: %w", err))
+		return nil, (fmt.Errorf("mongodb connection url is invalid: %w", err))
 	} else if raw.Path == "/" {
 		fmt.Printf("raw connection: %+v", raw)
-		panic(fmt.Errorf("mongodb connection url should contain a default database name: %w", err))
+		return nil, (fmt.Errorf("mongodb connection url should contain a default database name: %w", err))
 	}
 	// trim the leading '/'
 	dbName := raw.Path[1:]
-	return &MongoDB{connectionUrl: connectionUrl, dbName: dbName}
+	return &MongoDB{connectionUrl: connectionUrl, dbName: dbName}, nil
 }
 
 // Connect implements db.Database.

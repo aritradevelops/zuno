@@ -3,7 +3,6 @@ module gorest-cli
 go 1.25.5
 
 require (
-	github.com/aritradevelops/billbharat/backend/shared v0.0.0-20260106121828-73f8a78ed1b7
 	github.com/charmbracelet/huh v0.8.0
 	github.com/rs/zerolog v1.34.0
 	github.com/spf13/cobra v1.10.2
