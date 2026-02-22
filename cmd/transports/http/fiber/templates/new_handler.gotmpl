@@ -1,0 +1,272 @@
+package handler
+
+import (
+	"{{.Package}}/internal/pagination"
+	"{{.Package}}/internal/service"
+	"{{.Package}}/internal/transports/http/middlewares"
+	"{{.Package}}/pkg/logger"
+	"time"
+
+	"{{.Package}}/internal/transports/http/translation"
+
+	"github.com/gofiber/fiber/v3"
+	"github.com/google/uuid"
+)
+
+var {{.HandlerType}}Info = map[string]string{
+	"Module": "{{.Module}}",
+}
+
+type {{.HandlerType}} struct {
+	{{.ServiceVariable}} service.{{.ServiceType}}
+}
+
+func New{{.HandlerType}}({{.ServiceVariable}} service.{{.ServiceType}}) *{{.HandlerType}} {
+	return &{{.HandlerType}}{
+		{{.ServiceVariable}}: {{.ServiceVariable}},
+	}
+}
+
+type {{.FieldsType}} struct {
+	
+}
+
+type {{.Module}} struct {
+	UID        uuid.UUID `json:"id" example:"7e602c5d-8460-4790-b153-a4feb5ceba3a"`
+	{{.FieldsType}} `json:",inline"`
+	CreatedAt  time.Time  `json:"created_at" example:"2026-02-12T09:04:30.145+00:00"`
+	CreatedBy  uuid.UUID  `json:"created_by" example:"7e602c5d-8460-4790-b153-a4feb5ceba3a"`
+	UpdatedAt  time.Time  `json:"updated_at" example:"2026-02-12T09:04:30.145+00:00"`
+	UpdatedBy  uuid.UUID  `json:"updated_by" example:"7e602c5d-8460-4790-b153-a4feb5ceba3a"`
+	DeletedAt  *time.Time `json:"deleted_at" example:"2026-02-12T09:04:30.145+00:00"`
+	DeletedBy  *uuid.UUID `json:"deleted_by" example:"7e602c5d-8460-4790-b153-a4feb5ceba3a"`
+}
+
+// List godoc
+// @Summary      list {{.ReadablePlural}}
+// @Description  list {{.ReadablePlural}}
+// @Tags        {{.RouteTag}}
+// @Accept       json
+// @Produce      json
+// @Param        options query PaginationOptions false "options for listing customization"
+// @Success      200 {object} Response[[]{{.Module}}, PaginationInfo , NoError]
+// @Failure      401 {object} Response[NoData, NoInfo, string]
+// @Failure      403 {object} Response[NoData, NoInfo, string]
+// @Failure      500 {object} Response[NoData, NoInfo, string]
+// @Router       /{{.RoutePrefix}}/list [get]
+func (h *{{.HandlerType}}) List(c fiber.Ctx) error {
+	opts := (*PaginationOptions)(pagination.NewOptions())
+	if err := c.Bind().Query(opts); err != nil {
+		return err
+	}
+	actor, err := middlewares.GetActor(c)
+	if err != nil {
+		logger.Error().Err(err).Msg("can't get actor")
+		return fiber.ErrUnauthorized
+	}
+	result, err := h.{{.ServiceVariable}}.List(c.Context(), actor, (*pagination.Options)(opts))
+	if err != nil {
+		return err
+	}
+	{{.VariablePlural}} := make([]*{{.Module}}, len(result.Data))
+	for idx, {{.Variable}} := range result.Data {
+		{{.VariablePlural}}[idx] = fromService{{.Module}}({{.Variable}})
+	}
+	response := PaginatedResponse[*{{.Module}}]{
+		Data: {{.VariablePlural}},
+		Info: PaginationInfo(result.Info),
+	}
+	return c.JSON(SuccessWithInfo(translation.Localize(c, "controller.list", {{.HandlerType}}Info), response.Data, response.Info))
+}
+
+// Create godoc
+// @Summary      create {{.Article}} {{.Readable}}
+// @Description  create {{.Article}} {{.Readable}}
+// @Tags        {{.RouteTag}}
+// @Accept       json
+// @Produce      json
+// @Param        request body {{.FieldsType}} true "create {{.Readable}} payload"
+// @Success      201 {object} Response[{{.Module}}, NoInfo, NoError]
+// @Failure      400 {object} Response[NoData, NoInfo, map[string]validation.ValidationError]
+// @Failure      401 {object} Response[NoData, NoInfo, string]
+// @Failure      409 {object} Response[NoData, NoInfo, string]
+// @Failure      422 {object} Response[NoData, NoInfo, string]
+// @Failure      500 {object} Response[NoData, NoInfo, string]
+// @Router       /{{.RoutePrefix}}/create [post]
+func (h *{{.HandlerType}}) Create(c fiber.Ctx) error {
+	var payload {{.FieldsType}}
+	if err := c.Bind().Body(&payload); err != nil {
+		return err
+	}
+	actor, err := middlewares.GetActor(c)
+	if err != nil {
+		return fiber.ErrUnauthorized
+	}
+	{{.Variable}}, err := h.{{.ServiceVariable}}.Create(c.Context(), actor, service.{{.FieldsType}}(payload))
+	if err != nil {
+		return err
+	}
+	c.Status(fiber.StatusCreated)
+	return c.JSON(Success(translation.Localize(c, "controller.create", {{.HandlerType}}Info), fromService{{.Module}}({{.Variable}})))
+}
+
+// Update godoc
+// @Summary      update {{.Article}} {{.Readable}}
+// @Description  update {{.Article}} {{.Readable}}
+// @Tags        {{.RouteTag}}
+// @Accept       json
+// @Produce      json
+// @Param        request body {{.FieldsType}} true "update {{.Readable}} payload"
+// @Param 			 id path string true "id of the {{.Readable}}"
+// @Success      200 {object} Response[bool, NoInfo, NoError]
+// @Failure      400 {object} Response[NoData, NoInfo, map[string]validation.ValidationError]
+// @Failure      401 {object} Response[NoData, NoInfo, string]
+// @Failure      404 {object} Response[NoData, NoInfo, string]
+// @Failure      422 {object} Response[NoData, NoInfo, string]
+// @Failure      500 {object} Response[NoData, NoInfo, string]
+// @Router       /{{.RoutePrefix}}/update/{id} [put]
+func (h *{{.HandlerType}}) Update(c fiber.Ctx) error {
+	uid, err := uuid.Parse(c.Params("id"))
+	if err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(Failure(translation.Localize(c, "errors.400"), "Invalid {{.Readable}} ID"))
+	}
+	var payload {{.FieldsType}}
+	if err := c.Bind().Body(&payload); err != nil {
+		return err
+	}
+	actor, err := middlewares.GetActor(c)
+	if err != nil {
+		return fiber.ErrUnauthorized
+	}
+	ok, err := h.{{.ServiceVariable}}.Update(c.Context(), actor, uid, service.{{.FieldsType}}(payload))
+	if err != nil {
+		return err
+	}
+	return c.JSON(Success(translation.Localize(c, "controller.update", {{.HandlerType}}Info), ok))
+}
+
+// View godoc
+// @Summary      view {{.Article}} {{.Readable}}
+// @Description  view {{.Article}} {{.Readable}}
+// @Tags        {{.RouteTag}}
+// @Accept       json
+// @Produce      json
+// @Param 			 id path string true "id of the {{.Readable}}"
+// @Success      200 {object} Response[{{.Module}}, NoInfo, NoError]
+// @Failure      401 {object} Response[NoData, NoInfo, string]
+// @Failure      404 {object} Response[NoData, NoInfo, string]
+// @Failure      500 {object} Response[NoData, NoInfo, string]
+// @Router       /{{.RoutePrefix}}/view/{id} [get]
+func (h *{{.HandlerType}}) View(c fiber.Ctx) error {
+	uid, err := uuid.Parse(c.Params("id"))
+	if err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(Failure(translation.Localize(c, "errors.400"), "Invalid {{.Readable}} ID"))
+	}
+	actor, err := middlewares.GetActor(c)
+	if err != nil {
+		return fiber.ErrUnauthorized
+	}
+	{{.Variable}}, err := h.{{.ServiceVariable}}.View(c.Context(), actor, uid)
+	if err != nil {
+		return err
+	}
+	return c.JSON(Success(translation.Localize(c, "controller.view", {{.HandlerType}}Info), fromService{{.Module}}({{.Variable}})))
+}
+
+// Delete godoc
+// @Summary      delete {{.Article}} {{.Readable}}
+// @Description  delete {{.Article}} {{.Readable}}
+// @Tags        {{.RouteTag}}
+// @Accept       json
+// @Produce      json
+// @Param 			 id path string true "id of the {{.Readable}}"
+// @Success      200 {object} Response[bool, NoInfo, NoError]
+// @Failure      401 {object} Response[NoData, NoInfo, string]
+// @Failure      404 {object} Response[NoData, NoInfo, string]
+// @Failure      500 {object} Response[NoData, NoInfo, string]
+// @Router       /{{.RoutePrefix}}/delete/{id} [delete]
+func (h *{{.HandlerType}}) Delete(c fiber.Ctx) error {
+	uid, err := uuid.Parse(c.Params("id"))
+	if err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(Failure(translation.Localize(c, "errors.400"), "Invalid {{.Readable}} ID"))
+	}
+	actor, err := middlewares.GetActor(c)
+	if err != nil {
+		return fiber.ErrUnauthorized
+	}
+	ok, err := h.{{.ServiceVariable}}.Delete(c.Context(), actor, uid)
+	if err != nil {
+		return err
+	}
+	return c.JSON(Success(translation.Localize(c, "controller.delete", {{.HandlerType}}Info), ok))
+}
+
+// Destroy godoc
+// @Summary      destroy {{.Article}} {{.Readable}}
+// @Description  destroy {{.Article}} {{.Readable}}
+// @Tags        {{.RouteTag}}
+// @Accept       json
+// @Produce      json
+// @Param 			 id path string true "id of the {{.Readable}}"
+// @Success      200 {object} Response[bool, NoInfo, NoError]
+// @Failure      401 {object} Response[NoData, NoInfo, string]
+// @Failure      404 {object} Response[NoData, NoInfo, string]
+// @Failure      500 {object} Response[NoData, NoInfo, string]
+// @Router       /{{.RoutePrefix}}/destroy/{id} [delete]
+func (h *{{.HandlerType}}) Destroy(c fiber.Ctx) error {
+	uid, err := uuid.Parse(c.Params("id"))
+	if err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(Failure(translation.Localize(c, "errors.400"), "Invalid {{.Readable}} ID"))
+	}
+	actor, err := middlewares.GetActor(c)
+	if err != nil {
+		return fiber.ErrUnauthorized
+	}
+	ok, err := h.{{.ServiceVariable}}.Destroy(c.Context(), actor, uid)
+	if err != nil {
+		return err
+	}
+	return c.JSON(Success(translation.Localize(c, "controller.destroy", {{.HandlerType}}Info), ok))
+}
+
+// Restore godoc
+// @Summary      restore {{.Article}} {{.Readable}}
+// @Description  restore {{.Article}} {{.Readable}}
+// @Tags        {{.RouteTag}}
+// @Accept       json
+// @Produce      json
+// @Param 			 id path string true "id of the {{.Readable}}"
+// @Success      200 {object} Response[bool, NoInfo, NoError]
+// @Failure      401 {object} Response[NoData, NoInfo, string]
+// @Failure      404 {object} Response[NoData, NoInfo, string]
+// @Failure      500 {object} Response[NoData, NoInfo, string]
+// @Router       /{{.RoutePrefix}}/restore/{id} [patch]
+func (h *{{.HandlerType}}) Restore(c fiber.Ctx) error {
+	uid, err := uuid.Parse(c.Params("id"))
+	if err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(Failure(translation.Localize(c, "errors.400"), "Invalid {{.Readable}} ID"))
+	}
+	actor, err := middlewares.GetActor(c)
+	if err != nil {
+		return fiber.ErrUnauthorized
+	}
+	ok, err := h.{{.ServiceVariable}}.Restore(c.Context(), actor, uid)
+	if err != nil {
+		return err
+	}
+	return c.JSON(Success(translation.Localize(c, "controller.restore", {{.HandlerType}}Info), ok))
+}
+
+func fromService{{.Module}}({{.Variable}} *service.{{.Module}}) *{{.Module}} {
+	return &{{.Module}}{
+		UID: {{.Variable}}.UID,
+		{{.FieldsType}}: {{.FieldsType}}{
+		},
+		CreatedAt: {{.Variable}}.CreatedAt,
+		CreatedBy: {{.Variable}}.CreatedBy,
+		UpdatedAt: {{.Variable}}.UpdatedAt,
+		UpdatedBy: {{.Variable}}.UpdatedBy,
+		DeletedAt: {{.Variable}}.DeletedAt,
+		DeletedBy: {{.Variable}}.DeletedBy,
+	}
+}

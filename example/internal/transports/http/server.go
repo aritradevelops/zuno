@@ -5,6 +5,7 @@ import (
 	"goserve/internal/config"
 	"goserve/internal/service"
 	"goserve/internal/transports/http/handler"
+	"goserve/internal/transports/http/routes"
 
 	swaggo "github.com/gofiber/contrib/v3/swaggo"
 	"github.com/gofiber/fiber/v3"
@@ -65,7 +66,7 @@ func NewServer(config *config.Config, services *service.Services) *Server {
 		app:      app,
 		handlers: handler.New(services),
 	}
-	server.setupRoutes()
+	routes.Register(app.Group("/api/v1"), server.handlers)
 	return server
 }
 

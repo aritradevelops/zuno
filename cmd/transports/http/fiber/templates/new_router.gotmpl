@@ -1,0 +1,17 @@
+package routes
+
+import (
+	"{{.Package}}/internal/transports/http/handler"
+
+	"github.com/gofiber/fiber/v3"
+)
+
+func Register{{.Module}}Routes(router fiber.Router, authMiddleware fiber.Handler, {{.HandlerVariable}} *handler.{{.HandlerType}}) {
+	router.Get("/", authMiddleware, {{.HandlerVariable}}.List)
+	router.Post("/", authMiddleware, {{.HandlerVariable}}.Create)
+	router.Get("/:id", authMiddleware, {{.HandlerVariable}}.View)
+	router.Put("/:id", authMiddleware, {{.HandlerVariable}}.Update)
+	router.Delete("/:id", authMiddleware, {{.HandlerVariable}}.Delete)
+	router.Delete("/destroy/:id", authMiddleware, {{.HandlerVariable}}.Destroy)
+	router.Delete("/restore/:id", authMiddleware, {{.HandlerVariable}}.Restore)
+}
