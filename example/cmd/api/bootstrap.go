@@ -22,7 +22,7 @@ func Run() error {
 	setupCtx, cancel := context.WithTimeout(context.Background(), config.Timeout)
 	defer cancel()
 
-	db := mongodb.New(config.Database.Connection.Url)
+	db, _ := mongodb.New(config.Database.Connection.Url)
 	logger.Info().Msg("connected to database successfully!")
 	if err := db.Connect(setupCtx); err != nil {
 		return fmt.Errorf("failed to connect to database: %w", err)

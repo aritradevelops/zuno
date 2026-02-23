@@ -100,3 +100,16 @@ func paginate[T any](ctx context.Context, collection *mongo.Collection, actor *a
 	}
 	return data, info, nil
 }
+
+func toMap(d any) (map[string]any, error) {
+	raw, err := bson.Marshal(d)
+	if err != nil {
+		return nil, err
+	}
+
+	data := map[string]any{}
+	if err := bson.Unmarshal(raw, data); err != nil {
+		return nil, err
+	}
+	return data, nil
+}

@@ -1,0 +1,153 @@
+package service
+
+import (
+	"context"
+	"{{.Package}}/internal/action"
+	"{{.Package}}/internal/pagination"
+	"{{.Package}}/internal/repository"
+	"{{.Package}}/pkg/logger"
+	"{{.Package}}/pkg/validation"
+	"time"
+
+	"github.com/google/uuid"
+)
+
+type {{.FieldsType}} struct {
+}
+
+type {{.Module}} struct {
+	UID uuid.UUID
+	{{.FieldsType}}
+	CreatedAt time.Time
+	CreatedBy uuid.UUID
+	UpdatedAt time.Time
+	UpdatedBy uuid.UUID
+	DeletedAt *time.Time
+	DeletedBy *uuid.UUID
+}
+
+type {{.ServiceType}} interface {
+	List(context.Context, *action.Actor, *pagination.Options) (*pagination.Result[*{{.Module}}], error)
+	Create(context.Context, *action.Actor, {{.FieldsType}}) (*{{.Module}}, error)
+	Update(context.Context, *action.Actor, uuid.UUID, {{.FieldsType}}) (bool, error)
+	View(context.Context, *action.Actor, uuid.UUID) (*{{.Module}}, error)
+	Delete(context.Context, *action.Actor, uuid.UUID) (bool, error)
+	Destroy(context.Context, *action.Actor, uuid.UUID) (bool, error)
+	Restore(context.Context, *action.Actor, uuid.UUID) (bool, error)
+}
+
+type {{.ServiceVariable}} struct {
+	{{.RepositoryVariable}} repository.{{.RepositoryType}}
+}
+
+func New{{.ServiceType}}({{.RepositoryVariable}} repository.{{.RepositoryType}}) {{.ServiceType}} {
+	return &{{.ServiceVariable}}{
+		{{.RepositoryVariable}}: {{.RepositoryVariable}},
+	}
+}
+
+// List implements [{{.ServiceType}}].
+func (s *{{.ServiceVariable}}) List(ctx context.Context, actor *action.Actor, opts *pagination.Options) (*pagination.Result[*{{.Module}}], error) {
+	result, err := s.{{.RepositoryVariable}}.List(ctx, actor, opts)
+	if err != nil {
+		logger.Error().Err(err).Msg("failed to list {{.ReadablePlural}}")
+		return nil, ConvertRepositoryError(err)
+	}
+	{{.VariablePlural}} := make([]*{{.Module}}, len(result.Data))
+	for idx, {{.Variable}} := range result.Data {
+		{{.VariablePlural}}[idx] = fromRepository{{.Module}}({{.Variable}})
+	}
+
+	converted := &pagination.Result[*{{.Module}}]{
+		Data: {{.VariablePlural}},
+		Info: result.Info,
+	}
+	return converted, nil
+}
+
+// Create implements [{{.ServiceType}}].
+func (s *{{.ServiceVariable}}) Create(ctx context.Context, actor *action.Actor, payload {{.FieldsType}}) (*{{.Module}}, error) {
+	if err := validation.Validate(payload); err != nil {
+		logger.Error().Err(err).Msg("validation failed")
+		return nil, NewValidationError("Invalid {{.Readable}} data provided", err)
+	}
+	{{.Variable}}, err := s.{{.RepositoryVariable}}.Create(ctx, actor, repository.{{.FieldsType}}(payload))
+	if err != nil {
+		logger.Error().Err(err).Msg("failed to create {{.Readable}}")
+		return nil, ConvertRepositoryError(err)
+	}
+	logger.Info().Msg("{{.Readable}} created successfully!")
+	return fromRepository{{.Module}}({{.Variable}}), nil
+}
+
+// Update implements [{{.ServiceType}}].
+func (s *{{.ServiceVariable}}) Update(ctx context.Context, actor *action.Actor, id uuid.UUID, payload {{.FieldsType}}) (bool, error) {
+	if err := validation.Validate(payload); err != nil {
+		logger.Error().Err(err).Msg("validation failed")
+		return false, NewValidationError("Invalid {{.Readable}} data provided", err)
+	}
+	ok, err := s.{{.RepositoryVariable}}.UpdateByID(ctx, actor, id, repository.{{.FieldsType}}(payload))
+	if err != nil {
+		logger.Error().Err(err).Msg("failed to update {{.Readable}}")
+		return false, ConvertRepositoryError(err)
+	}
+	logger.Info().Msg("{{.Readable}} updated successfully!")
+	return ok, nil
+}
+
+// View implements [{{.ServiceType}}].
+func (s *{{.ServiceVariable}}) View(ctx context.Context, actor *action.Actor, id uuid.UUID) (*{{.Module}}, error) {
+	{{.Variable}}, err := s.{{.RepositoryVariable}}.FindByID(ctx, actor, id)
+	if err != nil {
+		logger.Error().Err(err).Msg("{{.Readable}} not found")
+		return nil, ConvertRepositoryError(err)
+	}
+	return fromRepository{{.Module}}({{.Variable}}), nil
+}
+
+// Delete implements [{{.ServiceType}}].
+func (s *{{.ServiceVariable}}) Delete(ctx context.Context, actor *action.Actor, id uuid.UUID) (bool, error) {
+	ok, err := s.{{.RepositoryVariable}}.DeleteByID(ctx, actor, id)
+	if err != nil {
+		logger.Error().Err(err).Msg("failed to delete {{.Readable}}")
+		return false, ConvertRepositoryError(err)
+	}
+	logger.Info().Msg("{{.Readable}} deleted successfully")
+	return ok, nil
+}
+
+// Destroy implements [{{.ServiceType}}].
+func (s *{{.ServiceVariable}}) Destroy(ctx context.Context, actor *action.Actor, id uuid.UUID) (bool, error) {
+	ok, err := s.{{.RepositoryVariable}}.DestroyByID(ctx, actor, id)
+	if err != nil {
+		logger.Error().Err(err).Msg("failed to destroy {{.Readable}}")
+		return false, ConvertRepositoryError(err)
+	}
+	logger.Info().Msg("{{.Readable}} destroyed successfully")
+	return ok, nil
+}
+
+// Restore implements [{{.ServiceType}}].
+func (s *{{.ServiceVariable}}) Restore(ctx context.Context, actor *action.Actor, id uuid.UUID) (bool, error) {
+	ok, err := s.{{.RepositoryVariable}}.RestoreByID(ctx, actor, id)
+	if err != nil {
+		logger.Error().Err(err).Msg("failed to restore {{.Readable}}")
+		return false, ConvertRepositoryError(err)
+	}
+	logger.Info().Msg("{{.Readable}} restored successfully")
+	return ok, nil
+}
+
+func fromRepository{{.Module}}({{.Variable}} *repository.{{.Module}}) *{{.Module}} {
+	return &{{.Module}}{
+		UID: {{.Variable}}.UID,
+		{{.FieldsType}}: {{.FieldsType}}{
+		},
+		CreatedAt: {{.Variable}}.CreatedAt,
+		CreatedBy: {{.Variable}}.CreatedBy,
+		UpdatedAt: {{.Variable}}.UpdatedAt,
+		UpdatedBy: {{.Variable}}.UpdatedBy,
+		DeletedAt: {{.Variable}}.DeletedAt,
+		DeletedBy: {{.Variable}}.DeletedBy,
+	}
+}

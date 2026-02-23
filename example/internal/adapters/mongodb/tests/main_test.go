@@ -35,7 +35,7 @@ func setup() error {
 	}
 
 	// connect to the database
-	db = mongodb.New(conf.Database.Connection.Url)
+	db, _ = mongodb.New(conf.Database.Connection.Url)
 	if err := db.Connect(context.Background()); err != nil {
 		logger.Error().Err(err).Msg("failed to connect to the database")
 	}

@@ -1,0 +1,163 @@
+package mongodb
+
+import (
+	"context"
+	"{{.Package}}/internal/action"
+	"{{.Package}}/internal/pagination"
+	"{{.Package}}/internal/repository"
+	"time"
+
+	"github.com/google/uuid"
+	"go.mongodb.org/mongo-driver/v2/bson"
+	"go.mongodb.org/mongo-driver/v2/mongo"
+)
+
+type {{.RepositoryType}} struct {
+	collection *mongo.Collection
+	client     *mongo.Client
+}
+
+const {{.Module}}CollectionName = "{{.Collection}}"
+
+var {{.Module}}SearchFields = []string{}
+
+func New{{.RepositoryType}}(client *mongo.Client, db *mongo.Database) repository.{{.RepositoryType}} {
+	return &{{.RepositoryType}}{
+		client:     client,
+		collection: db.Collection({{.Module}}CollectionName),
+	}
+}
+
+// List implements repository.{{.RepositoryType}}.
+func (r *{{.RepositoryType}}) List(ctx context.Context, actor *action.Actor, opts *pagination.Options) (*pagination.Result[*repository.{{.Module}}], error) {
+	{{.VariablePlural}}, info, err := paginate[*{{.Module}}](ctx, r.collection, actor, opts)
+	if err != nil {
+		return nil, repository.NewDatabaseQueryError("list {{.ReadablePlural}}", err)
+	}
+	data := make([]*repository.{{.Module}}, len({{.VariablePlural}}))
+	for idx, {{.Variable}} := range {{.VariablePlural}} {
+		data[idx] = {{.Variable}}.toRepository()
+	}
+	return &pagination.Result[*repository.{{.Module}}]{
+		Data: data,
+		Info: *info,
+	}, nil
+}
+
+// Create implements repository.{{.RepositoryType}}.
+func (r *{{.RepositoryType}}) Create(ctx context.Context, actor *action.Actor, payload repository.{{.FieldsType}}) (*repository.{{.Module}}, error) {
+	fields := ({{.FieldsType}})(payload)
+	{{.Variable}} := &{{.Module}}{
+		{{.FieldsType}}: fields,
+	}
+	{{.Variable}}.UID = uuid.New()
+	{{.Variable}}.CreatedAt = time.Now()
+	{{.Variable}}.CreatedBy = actor.UID
+	{{.Variable}}.UpdatedAt = time.Now()
+	{{.Variable}}.UpdatedBy = actor.UID
+
+	if _, err := r.collection.InsertOne(ctx, {{.Variable}}); err != nil {
+		return nil, repository.NewDatabaseInsertError("create {{.Readable}}", err)
+	}
+	return {{.Variable}}.toRepository(), nil
+}
+
+// FindByID implements repository.{{.RepositoryType}}.
+func (r *{{.RepositoryType}}) FindByID(ctx context.Context, actor *action.Actor, id uuid.UUID) (*repository.{{.Module}}, error) {
+	filter := bson.D{
+		{Key: "uid", Value: id}, {Key: "deleted_at", Value: nil},
+	}
+	applyFilter(filter, actor)
+	result := r.collection.FindOne(ctx, filter)
+	if result.Err() != nil {
+		if result.Err() == mongo.ErrNoDocuments {
+			return nil, repository.NewNotFoundError("{{.Module}}", id.String())
+		}
+		return nil, repository.NewDatabaseQueryError("find {{.Readable}} by ID", result.Err())
+	}
+	var {{.Variable}} *{{.Module}}
+	if err := result.Decode(&{{.Variable}}); err != nil {
+		return nil, repository.NewDatabaseQueryError("decode {{.Readable}}", err)
+	}
+	return {{.Variable}}.toRepository(), nil
+}
+
+// UpdateByID implements repository.{{.RepositoryType}}.
+func (r *{{.RepositoryType}}) UpdateByID(ctx context.Context, actor *action.Actor, id uuid.UUID, payload repository.{{.FieldsType}}) (bool, error) {
+	filter := bson.D{
+		{Key: "uid", Value: id}, {Key: "deleted_at", Value: nil},
+	}
+	dataMap, err := toMap(({{.FieldsType}})(payload))
+	if err != nil {
+		return false, repository.NewInvalidDataError("Invalid {{.Readable}} data", map[string]any{"field": "payload", "value": payload})
+	}
+	applyFilter(filter, actor)
+	dataMap["updated_at"] = time.Now()
+	dataMap["updated_by"] = actor.UID
+	result, err := r.collection.UpdateOne(ctx, filter, bson.M{"$set": dataMap})
+	if err != nil {
+		return false, repository.NewDatabaseUpdateError("update {{.Readable}}", err)
+	}
+	if result.ModifiedCount == 0 {
+		return false, repository.NewNotFoundError("{{.Module}}", id.String())
+	}
+	return true, nil
+}
+
+// DeleteByID implements repository.{{.RepositoryType}}.
+func (r *{{.RepositoryType}}) DeleteByID(ctx context.Context, actor *action.Actor, id uuid.UUID) (bool, error) {
+	filter := bson.D{
+		{Key: "uid", Value: id}, {Key: "deleted_at", Value: nil},
+	}
+	applyFilter(filter, actor)
+	result, err := r.collection.UpdateOne(ctx, filter, bson.M{"$set": bson.M{
+		"updated_at": time.Now(),
+		"updated_by": actor.UID,
+		"deleted_at": time.Now(),
+		"deleted_by": actor.UID,
+	}})
+	if err != nil {
+		return false, repository.NewDatabaseUpdateError("delete {{.Readable}}", err)
+	}
+	if result.ModifiedCount == 0 {
+		return false, repository.NewNotFoundError("{{.Module}}", id.String())
+	}
+	return true, nil
+}
+
+// DestroyByID implements repository.{{.RepositoryType}}.
+func (r *{{.RepositoryType}}) DestroyByID(ctx context.Context, actor *action.Actor, id uuid.UUID) (bool, error) {
+	filter := bson.D{
+		{Key: "uid", Value: id}, {Key: "deleted_at", Value: nil},
+	}
+	applyFilter(filter, actor)
+	result, err := r.collection.DeleteOne(ctx, filter)
+	if err != nil {
+		return false, repository.NewDatabaseDeleteError("destroy {{.Readable}}", err)
+	}
+	if result.DeletedCount == 0 {
+		return false, repository.NewNotFoundError("{{.Module}}", id.String())
+	}
+	return result.Acknowledged, nil
+}
+
+// RestoreByID implements repository.{{.RepositoryType}}.
+func (r *{{.RepositoryType}}) RestoreByID(ctx context.Context, actor *action.Actor, id uuid.UUID) (bool, error) {
+	filter := bson.D{
+		{Key: "uid", Value: id}, {Key: "deleted_at", Value: bson.M{"$ne": nil}},
+	}
+	applyFilter(filter, actor)
+	result, err := r.collection.UpdateOne(ctx, filter, bson.M{"$set": bson.M{
+		"updated_at": time.Now(),
+		"updated_by": actor.UID,
+		"deleted_at": nil,
+		"deleted_by": actor.UID,
+	}})
+	if err != nil {
+		return false, repository.NewDatabaseUpdateError("restore {{.Readable}}", err)
+	}
+	if result.ModifiedCount == 0 {
+		return false, repository.NewNotFoundError("{{.Module}}", id.String())
+	}
+	return true, nil
+}

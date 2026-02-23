@@ -4,7 +4,9 @@ Copyright © 2026 NAME HERE <EMAIL ADDRESS>
 package cmd
 
 import (
-	"gorest-cli/cmd/transports/http/fiber"
+	"gorest-cli/cmd/generators/fiber"
+	"gorest-cli/cmd/generators/repository"
+	"gorest-cli/cmd/generators/service"
 
 	"github.com/spf13/cobra"
 )
@@ -16,6 +18,26 @@ var testCmd = &cobra.Command{
 	Long: `A longer description that spans multiple lines and likely contains examples
 and usage of using your command.`,
 	Run: func(cmd *cobra.Command, args []string) {
+
+		if err := repository.AddNewRepository("goserve", "ProductVariant"); err != nil {
+			cmd.PrintErrln("failed to add new repository:", err)
+			return
+		}
+
+		if err := repository.RegisterNewRepository("ProductVariant"); err != nil {
+			cmd.PrintErrln("failed to register new repository:", err)
+			return
+		}
+
+		if err := service.AddNewService("goserve", "ProductVariant"); err != nil {
+			cmd.PrintErrln("failed to add new service:", err)
+			return
+		}
+
+		if err := service.RegisterNewService("ProductVariant"); err != nil {
+			cmd.PrintErrln("failed to register new service:", err)
+			return
+		}
 
 		if err := fiber.AddNewHandler("goserve", "ProductVariant"); err != nil {
 			cmd.PrintErrln("failed to add new handler:", err)

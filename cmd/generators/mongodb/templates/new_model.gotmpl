@@ -1,19 +1,19 @@
 package mongodb
 
 import (
-	"goserve/internal/repository"
+	"{{.Package}}/internal/repository"
 	"time"
 
 	"github.com/google/uuid"
 )
 
-type UserFields struct {
-	Email string `bson:"email,omitempty"`
+type {{.FieldsType}} struct {
+
 }
 
-type User struct {
+type {{.Module}} struct {
 	UID        uuid.UUID `bson:"uid,omitempty"`
-	UserFields `bson:",inline"`
+	{{.FieldsType}} `bson:",inline"`
 	CreatedAt  time.Time  `bson:"created_at,omitempty"`
 	CreatedBy  uuid.UUID  `bson:"created_by,omitempty"`
 	UpdatedAt  time.Time  `bson:"updated_at,omitempty"`
@@ -22,11 +22,10 @@ type User struct {
 	DeletedBy  *uuid.UUID `bson:"deleted_by,omitempty"`
 }
 
-func (u *User) toRepository() *repository.User {
-	return &repository.User{
+func (u *{{.Module}}) toRepository() *repository.{{.Module}} {
+	return &repository.{{.Module}}{
 		UID: u.UID,
-		UserFields: repository.UserFields{
-			Email: u.Email,
+		{{.FieldsType}}: repository.{{.FieldsType}}{
 		},
 		CreatedAt: u.CreatedAt,
 		CreatedBy: u.CreatedBy,

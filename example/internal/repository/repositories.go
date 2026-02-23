@@ -2,5 +2,4 @@ package repository
 
 type Repositories struct {
 	User UserRepository
-	// THIS IS REPOSITORY MARKER. DO NOT TOUCH!
 }

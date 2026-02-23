@@ -87,7 +87,7 @@ func (r *UserRepository) UpdateByID(ctx context.Context, actor *action.Actor, id
 	filter := bson.D{
 		{Key: "uid", Value: id}, {Key: "deleted_at", Value: nil},
 	}
-	dataMap, err := (UserFields)(payload).toMap()
+	dataMap, err := toMap((UserFields)(payload))
 	if err != nil {
 		return false, repository.NewInvalidDataError("Invalid user data", map[string]any{"field": "payload", "value": payload})
 	}
