@@ -1,0 +1,7 @@
+package_name: goserve
+transports: 
+  - type: "http"
+    provider: "fiber"
+adapters: 
+  - type: "database"
+    provider: "mongodb"

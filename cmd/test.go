@@ -4,9 +4,10 @@ Copyright © 2026 NAME HERE <EMAIL ADDRESS>
 package cmd
 
 import (
-	"gorest-cli/cmd/generators/fiber"
-	"gorest-cli/cmd/generators/repository"
-	"gorest-cli/cmd/generators/service"
+	"zuno/cmd/generators/fiber"
+	"zuno/cmd/generators/mongodb"
+	"zuno/cmd/generators/repository"
+	"zuno/cmd/generators/service"
 
 	"github.com/spf13/cobra"
 )
@@ -18,6 +19,21 @@ var testCmd = &cobra.Command{
 	Long: `A longer description that spans multiple lines and likely contains examples
 and usage of using your command.`,
 	Run: func(cmd *cobra.Command, args []string) {
+
+		if err := mongodb.AddNewModel("goserve", "ProductVariant"); err != nil {
+			cmd.PrintErrln("failed to add new model:", err)
+			return
+		}
+
+		if err := mongodb.AddNewRepository("goserve", "ProductVariant"); err != nil {
+			cmd.PrintErrln("failed to add new repository:", err)
+			return
+		}
+
+		if err := mongodb.RegisterNewRepository("ProductVariant"); err != nil {
+			cmd.PrintErrln("failed to register new repository:", err)
+			return
+		}
 
 		if err := repository.AddNewRepository("goserve", "ProductVariant"); err != nil {
 			cmd.PrintErrln("failed to add new repository:", err)

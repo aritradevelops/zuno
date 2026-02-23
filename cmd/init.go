@@ -3,7 +3,6 @@ package cmd
 import (
 	"embed"
 	"fmt"
-	"gorest-cli/pkg/logger"
 	"io/fs"
 	"os"
 	"os/exec"
@@ -11,6 +10,7 @@ import (
 	"slices"
 	"strings"
 	"text/template"
+	"zuno/pkg/logger"
 
 	"github.com/charmbracelet/huh"
 	"github.com/spf13/cobra"
@@ -84,7 +84,7 @@ var initCmd = &cobra.Command{
 		}
 		defer func() {
 			logger.Info().Msgf(`
-			Re-run with : gorest-cli init --package=%s \
+			Re-run with : zuno init --package=%s \
 			--adapter=%s \
 			--transports=%s`, packageName, adapter, strings.Join(transports, ","))
 		}()

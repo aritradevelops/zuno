@@ -10,4 +10,5 @@ import (
 func Register(app fiber.Router, handlers *handler.Handlers) {
 	authMiddleware := middlewares.AuthMiddleware()
 	RegisterUserRoutes(app.Group("/users"), authMiddleware, handlers.User)
+	RegisterProductVariantRoutes(app.Group("/product-variants"), authMiddleware, handlers.ProductVariant)
 }
