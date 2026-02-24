@@ -10,6 +10,7 @@ import (
 	"path"
 	"strings"
 	"text/template"
+	"zuno/cmd/data"
 
 	"github.com/ettle/strcase"
 	"github.com/gertd/go-pluralize"
@@ -34,6 +35,14 @@ type RegisterNewServiceData struct {
 	Module      string // Domain module name, PascalCase (e.g. "ProductVariant")
 	ServiceType string // ServiceType struct type (e.g. "ProductVariantService")
 	FileName    string
+}
+
+type AddFieldsToServiceData struct {
+	Module             string // Domain module name, PascalCase (e.g. "ProductVariant")
+	FieldsType         string // Payload / fields struct (e.g. "ProductVariantFields")
+	RepositoryFunction string // fromRepositoryProductVariant
+	Variable           string // productVariant
+	FileName           string // product_variant_service.go
 }
 
 // AddNewService adds a new service
@@ -182,6 +191,98 @@ func RegisterNewService(module string) error {
 	return nil
 }
 
+// AddFieldsToService adds fields to the service
+func AddFieldsToService(module string, fields []data.Field) error {
+	data, err := prepareAddFieldsToServiceData(module)
+	if err != nil {
+		return err
+	}
+	wd, err := os.Getwd()
+	if err != nil {
+		return err
+	}
+	filePath := path.Join(wd, pathToService, data.FileName)
+
+	sourceFile, err := os.OpenFile(filePath, os.O_RDWR, 0644)
+	if err != nil {
+		return err
+	}
+	defer sourceFile.Close()
+	fset := token.NewFileSet()
+
+	f, err := parser.ParseFile(fset, "random.go", sourceFile, parser.ParseComments)
+	if err != nil {
+		return err
+	}
+	ast.Inspect(f, func(n ast.Node) bool {
+
+		// 1️⃣ Find Fields struct
+		ts, ok := n.(*ast.TypeSpec)
+		if ok && ts.Name.Name == data.FieldsType {
+			st, ok := ts.Type.(*ast.StructType)
+			if ok {
+				for _, field := range fields {
+					st.Fields.List = append(st.Fields.List, &ast.Field{
+						Names: []*ast.Ident{ast.NewIdent(field.Name)},
+						Type:  ast.NewIdent(field.Type),
+						Tag: &ast.BasicLit{
+							Kind:  token.STRING,
+							Value: field.ServiceTags(),
+						},
+					})
+				}
+			}
+		}
+
+		// 2️⃣ Find fromService<Module>
+		fn, ok := n.(*ast.FuncDecl)
+		if ok && fn.Name.Name == data.RepositoryFunction {
+
+			ast.Inspect(fn.Body, func(n ast.Node) bool {
+
+				// Look for composite literal
+				cl, ok := n.(*ast.CompositeLit)
+				if !ok {
+					return true
+				}
+
+				// Find FieldsType composite literal
+				if ident, ok := cl.Type.(*ast.Ident); ok && ident.Name == data.FieldsType {
+					for _, field := range fields {
+						cl.Elts = append(cl.Elts, &ast.KeyValueExpr{
+							Key: ast.NewIdent(field.Name),
+							Value: &ast.SelectorExpr{
+								X:   ast.NewIdent(data.Variable),
+								Sel: ast.NewIdent(field.Name),
+							},
+						})
+					}
+				}
+
+				return true
+			})
+		}
+
+		return true
+	})
+
+	// Reset file before writing
+	if _, err := sourceFile.Seek(0, 0); err != nil {
+		return err
+	}
+
+	if err := sourceFile.Truncate(0); err != nil {
+		return err
+	}
+
+	// Print back the modified source
+	if err := format.Node(sourceFile, fset, f); err != nil {
+		return err
+	}
+
+	return nil
+}
+
 func prepareAddNewServiceData(packageName, module string) (AddNewServiceData, error) {
 	pluralize := pluralize.NewClient()
 	return AddNewServiceData{
@@ -206,4 +307,15 @@ func prepareRegisterNewServiceData(module string) (RegisterNewServiceData, error
 		ServiceType: module + "Service",
 		FileName:    "services.go",
 	}, nil
+}
+
+func prepareAddFieldsToServiceData(module string) (AddFieldsToServiceData, error) {
+	data := AddFieldsToServiceData{
+		Module:             module,
+		FieldsType:         module + "Fields",
+		RepositoryFunction: "fromRepository" + module,
+		Variable:           strcase.ToCamel(module),
+		FileName:           strcase.ToSnake(module) + "_service.go",
+	}
+	return data, nil
 }

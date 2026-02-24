@@ -7,7 +7,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-var addModuleCmd = &cobra.Command{
+var addModulesCmd = &cobra.Command{
 	Use:   "modules [name...]",
 	Short: "Add modules",
 	Args:  cobra.MinimumNArgs(1),
@@ -30,5 +30,5 @@ func addModules(config *config.Config, modules []string, cmd *cobra.Command) {
 }
 
 func init() {
-	addCmd.AddCommand(addModuleCmd)
+	addCmd.AddCommand(addModulesCmd)
 }

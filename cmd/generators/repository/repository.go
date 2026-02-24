@@ -8,6 +8,7 @@ import (
 	"os"
 	"path"
 	"text/template"
+	"zuno/cmd/data"
 
 	"github.com/ettle/strcase"
 )
@@ -24,6 +25,12 @@ type RegisterNewRepositoryData struct {
 	Module         string // Domain module name, PascalCase (e.g. "ProductVariant")
 	RepositoryType string // RepositoryType struct type (e.g. "ProductVariantRepository")
 	FileName       string
+}
+
+type AddFieldsToRepositoryData struct {
+	Module     string // Domain module name, PascalCase (e.g. "ProductVariant")
+	FieldsType string // Payload / fields struct (e.g. "ProductVariantFields")
+	FileName   string // product_variant_repository.go
 }
 
 // AddNewRepository adds a new repository
@@ -120,6 +127,64 @@ func RegisterNewRepository(module string) error {
 	return nil
 }
 
+// AddFieldsToRepository adds fields to the repository
+func AddFieldsToRepository(module string, fields []data.Field) error {
+	data, err := prepareAddFieldsToRepositoryData(module)
+	if err != nil {
+		return err
+	}
+	wd, err := os.Getwd()
+	if err != nil {
+		return err
+	}
+	filePath := path.Join(wd, pathToRepository, data.FileName)
+
+	sourceFile, err := os.OpenFile(filePath, os.O_RDWR, 0644)
+	if err != nil {
+		return err
+	}
+	defer sourceFile.Close()
+	fset := token.NewFileSet()
+
+	f, err := parser.ParseFile(fset, "random.go", sourceFile, parser.ParseComments)
+	if err != nil {
+		return err
+	}
+	ast.Inspect(f, func(n ast.Node) bool {
+
+		// 1️⃣ Find Fields struct
+		ts, ok := n.(*ast.TypeSpec)
+		if ok && ts.Name.Name == data.FieldsType {
+			st, ok := ts.Type.(*ast.StructType)
+			if ok {
+				for _, field := range fields {
+					st.Fields.List = append(st.Fields.List, &ast.Field{
+						Names: []*ast.Ident{ast.NewIdent(field.Name)},
+						Type:  ast.NewIdent(field.Type),
+					})
+				}
+			}
+		}
+		return true
+	})
+
+	// Reset file before writing
+	if _, err := sourceFile.Seek(0, 0); err != nil {
+		return err
+	}
+
+	if err := sourceFile.Truncate(0); err != nil {
+		return err
+	}
+
+	// Print back the modified source
+	if err := format.Node(sourceFile, fset, f); err != nil {
+		return err
+	}
+
+	return nil
+}
+
 func prepareAddNewRepositoryData(packageName, module string) (AddNewRepositoryData, error) {
 	return AddNewRepositoryData{
 		Package:        packageName,
@@ -136,4 +201,13 @@ func prepareRegisterNewRepositoryData(module string) (RegisterNewRepositoryData,
 		RepositoryType: module + "Repository",
 		FileName:       "repositories.go",
 	}, nil
+}
+
+func prepareAddFieldsToRepositoryData(module string) (AddFieldsToRepositoryData, error) {
+	data := AddFieldsToRepositoryData{
+		Module:     module,
+		FieldsType: module + "Fields",
+		FileName:   strcase.ToSnake(module) + "_repository.go",
+	}
+	return data, nil
 }

@@ -10,6 +10,7 @@ import (
 	"path"
 	"strings"
 	"text/template"
+	"zuno/cmd/data"
 
 	"github.com/ettle/strcase"
 	"github.com/gertd/go-pluralize"
@@ -36,6 +37,14 @@ type RegisterNewHandlerData struct {
 	Module      string // Domain module name, PascalCase (e.g. "ProductVariant")
 	HandlerType string // Handler struct type (e.g. "ProductVariantHandler")
 	FileName    string
+}
+
+type AddFieldsToHandlerData struct {
+	Module          string // Domain module name, PascalCase (e.g. "ProductVariant")
+	FieldsType      string // Payload / fields struct (e.g. "ProductVariantFields")
+	ServiceFunction string // fromProductVariant
+	Variable        string // productVariant
+	FileName        string // product_variant_handler.go
 }
 
 // AddNewHandler adds default handlers for a new module
@@ -186,6 +195,98 @@ func RegisterNewHandler(module string) error {
 	return nil
 }
 
+// AddFieldsToHandler adds fields to the handler
+func AddFieldsToHandler(module string, fields []data.Field) error {
+	data, err := prepareAddFieldsToHandlerData(module)
+	if err != nil {
+		return err
+	}
+	wd, err := os.Getwd()
+	if err != nil {
+		return err
+	}
+	filePath := path.Join(wd, pathToHandlers, data.FileName)
+
+	sourceFile, err := os.OpenFile(filePath, os.O_RDWR, 0644)
+	if err != nil {
+		return err
+	}
+	defer sourceFile.Close()
+	fset := token.NewFileSet()
+
+	f, err := parser.ParseFile(fset, "random.go", sourceFile, parser.ParseComments)
+	if err != nil {
+		return err
+	}
+	ast.Inspect(f, func(n ast.Node) bool {
+
+		// 1️⃣ Find Fields struct
+		ts, ok := n.(*ast.TypeSpec)
+		if ok && ts.Name.Name == data.FieldsType {
+			st, ok := ts.Type.(*ast.StructType)
+			if ok {
+				for _, field := range fields {
+					st.Fields.List = append(st.Fields.List, &ast.Field{
+						Names: []*ast.Ident{ast.NewIdent(field.Name)},
+						Type:  ast.NewIdent(field.Type),
+						Tag: &ast.BasicLit{
+							Kind:  token.STRING,
+							Value: field.HandlerTags(),
+						},
+					})
+				}
+			}
+		}
+
+		// 2️⃣ Find fromService<Module>
+		fn, ok := n.(*ast.FuncDecl)
+		if ok && fn.Name.Name == data.ServiceFunction {
+
+			ast.Inspect(fn.Body, func(n ast.Node) bool {
+
+				// Look for composite literal
+				cl, ok := n.(*ast.CompositeLit)
+				if !ok {
+					return true
+				}
+
+				// Find FieldsType composite literal
+				if ident, ok := cl.Type.(*ast.Ident); ok && ident.Name == data.FieldsType {
+					for _, field := range fields {
+						cl.Elts = append(cl.Elts, &ast.KeyValueExpr{
+							Key: ast.NewIdent(field.Name),
+							Value: &ast.SelectorExpr{
+								X:   ast.NewIdent(data.Variable),
+								Sel: ast.NewIdent(field.Name),
+							},
+						})
+					}
+				}
+
+				return true
+			})
+		}
+
+		return true
+	})
+
+	// Reset file before writing
+	if _, err := sourceFile.Seek(0, 0); err != nil {
+		return err
+	}
+
+	if err := sourceFile.Truncate(0); err != nil {
+		return err
+	}
+
+	// Print back the modified source
+	if err := format.Node(sourceFile, fset, f); err != nil {
+		return err
+	}
+
+	return nil
+}
+
 func prepareNewHandlerData(packageName string, module string) (AddNewHandlerData, error) {
 	pluralize := pluralize.NewClient()
 
@@ -213,6 +314,17 @@ func prepareRegisterNewHandlerData(module string) (RegisterNewHandlerData, error
 		Module:      module,
 		HandlerType: module + "Handler",
 		FileName:    "handlers.go",
+	}
+	return data, nil
+}
+
+func prepareAddFieldsToHandlerData(module string) (AddFieldsToHandlerData, error) {
+	data := AddFieldsToHandlerData{
+		Module:          module,
+		FieldsType:      module + "Fields",
+		ServiceFunction: "fromService" + module,
+		Variable:        strcase.ToCamel(module),
+		FileName:        strcase.ToSnake(module) + "_handler.go",
 	}
 	return data, nil
 }
