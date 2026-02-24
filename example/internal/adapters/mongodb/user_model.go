@@ -9,6 +9,7 @@ import (
 
 type UserFields struct {
 	Email string `bson:"email,omitempty"`
+	Name  string `bson:"name"`
 }
 
 type User struct {
@@ -26,7 +27,7 @@ func (u *User) toRepository() *repository.User {
 	return &repository.User{
 		UID: u.UID,
 		UserFields: repository.UserFields{
-			Email: u.Email,
+			Email: u.Email, Name: u.Name,
 		},
 		CreatedAt: u.CreatedAt,
 		CreatedBy: u.CreatedBy,

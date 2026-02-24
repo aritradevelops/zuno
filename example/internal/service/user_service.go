@@ -14,6 +14,7 @@ import (
 
 type UserFields struct {
 	Email string `validate:"required,email"`
+	Name  string `validate:"required"`
 }
 
 type User struct {
@@ -143,7 +144,7 @@ func fromRepositoryUser(user *repository.User) *User {
 	return &User{
 		UID: user.UID,
 		UserFields: UserFields{
-			Email: user.Email,
+			Email: user.Email, Name: user.Name,
 		},
 		CreatedAt: user.CreatedAt,
 		CreatedBy: user.CreatedBy,

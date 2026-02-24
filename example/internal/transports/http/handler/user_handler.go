@@ -29,6 +29,7 @@ func NewUserHandler(userService service.UserService) *UserHandler {
 
 type UserFields struct {
 	Email string `json:"email" example:"user@example.com"`
+	Name  string `json:"name" example:"Demo"`
 }
 
 type User struct {
@@ -262,7 +263,7 @@ func fromServiceUser(user *service.User) *User {
 	return &User{
 		UID: user.UID,
 		UserFields: UserFields{
-			Email: user.Email,
+			Email: user.Email, Name: user.Name,
 		},
 		CreatedAt: user.CreatedAt,
 		CreatedBy: user.CreatedBy,

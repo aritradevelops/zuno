@@ -11,6 +11,7 @@ import (
 
 type UserFields struct {
 	Email string
+	Name  string
 	// THIS IS REPOSITORY MARKER. DO NOT TOUCH!
 }
 
