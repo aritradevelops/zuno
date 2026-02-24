@@ -8,7 +8,7 @@ import (
 	"go/token"
 	"os"
 	"path"
-	"text/template"
+	"zuno/cmd/utils"
 
 	"github.com/ettle/strcase"
 	"github.com/gertd/go-pluralize"
@@ -31,29 +31,15 @@ type RegisterNewRouterData struct {
 // AddNewRouter adds a router with basic routes for a new module
 func AddNewRouter(packageName, module string) error {
 	data, err := prepareAddNewRouterData(packageName, module)
-	if err != nil {
-		return err
-	}
-	tmplContent, err := loadTemplate("new_router")
-	if err != nil {
-		return err
-	}
-	wd, err := os.Getwd()
-	if err != nil {
-		return err
-	}
-	filePath := path.Join(wd, pathToRoutes, data.FileName)
-	tmpl, err := template.New(filePath).Parse(tmplContent)
-	if err != nil {
-		return err
-	}
-	file, err := os.Create(filePath)
-	if err != nil {
-		return err
-	}
-	defer file.Close()
 
-	return tmpl.Execute(file, data)
+	if err != nil {
+		return err
+	}
+
+	return utils.CreateFromTemplate(
+		templates, "templates/new_router.gotmpl",
+		path.Join(pathToRoutes, data.FileName), data,
+	)
 }
 
 // RegisterNewRouter registers a new router for the given module under the base router

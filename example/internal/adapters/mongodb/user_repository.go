@@ -30,7 +30,7 @@ func NewUserRepository(client *mongo.Client, db *mongo.Database) repository.User
 
 // List implements repository.UserRepository.
 func (r *UserRepository) List(ctx context.Context, actor *action.Actor, opts *pagination.Options) (*pagination.Result[*repository.User], error) {
-	users, info, err := paginate[*User](ctx, r.collection, actor, opts)
+	users, info, err := paginate[*User](ctx, r.collection, actor, opts, UserSearchFields)
 	if err != nil {
 		return nil, repository.NewDatabaseQueryError("list users", err)
 	}

@@ -1,7 +1,15 @@
-package_name: goserve
-transports: 
-  - type: "http"
+package: goserve
+transport:
+  http:
+    enabled: true
     provider: "fiber"
-adapters: 
-  - type: "database"
+  grpc:
+    enabled: false
+    provider: "grpc"
+  ws:
+    enabled: false
+    provider: "gorilla"
+adapters:
+  database:
+    enabled: true
     provider: "mongodb"

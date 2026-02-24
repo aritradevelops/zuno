@@ -8,6 +8,7 @@ import (
 	"zuno/cmd/generators/mongodb"
 	"zuno/cmd/generators/repository"
 	"zuno/cmd/generators/service"
+	"zuno/pkg/logger"
 
 	"github.com/spf13/cobra"
 )
@@ -75,7 +76,7 @@ and usage of using your command.`,
 			return
 		}
 
-		cmd.Println("ProductVariant scaffolding created successfully")
+		logger.Info("ProductVariant scaffolding created successfully")
 	},
 }
 

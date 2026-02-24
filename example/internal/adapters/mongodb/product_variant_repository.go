@@ -30,7 +30,7 @@ func NewProductVariantRepository(client *mongo.Client, db *mongo.Database) repos
 
 // List implements repository.ProductVariantRepository.
 func (r *ProductVariantRepository) List(ctx context.Context, actor *action.Actor, opts *pagination.Options) (*pagination.Result[*repository.ProductVariant], error) {
-	productVariants, info, err := paginate[*ProductVariant](ctx, r.collection, actor, opts)
+	productVariants, info, err := paginate[*ProductVariant](ctx, r.collection, actor, opts, ProductVariantSearchFields)
 	if err != nil {
 		return nil, repository.NewDatabaseQueryError("list product variants", err)
 	}

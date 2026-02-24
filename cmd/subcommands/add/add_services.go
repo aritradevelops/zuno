@@ -4,6 +4,7 @@ import (
 	"zuno/cmd/app"
 	"zuno/cmd/config"
 	"zuno/cmd/generators/service"
+	"zuno/pkg/logger"
 
 	"github.com/spf13/cobra"
 )
@@ -15,7 +16,7 @@ var addServicesCmd = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 		config := app.Ctx.Config
 		if config == nil {
-			cmd.Println("No config found")
+			logger.Info("No config found")
 			return
 		}
 		addServices(config, args, cmd)
@@ -24,18 +25,18 @@ var addServicesCmd = &cobra.Command{
 
 func addServices(config *config.Config, modules []string, cmd *cobra.Command) {
 	for _, module := range modules {
-		if err := service.AddNewService(config.PackageName, module); err != nil {
-			cmd.PrintErrln("failed to add new service:", err)
+		if err := service.AddNewService(config.Package, module); err != nil {
+			logger.Error("failed to add new service:", "err", err)
 			return
 		}
 
 		if err := service.RegisterNewService(module); err != nil {
-			cmd.PrintErrln("failed to register new repository:", err)
+			logger.Error("failed to register new repository:", "err", err)
 			return
 		}
 	}
 
-	cmd.Println("Services added successfully")
+	logger.Info("Services added successfully")
 }
 
 func init() {

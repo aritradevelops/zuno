@@ -9,8 +9,8 @@ import (
 	"os"
 	"path"
 	"strings"
-	"text/template"
 	"zuno/cmd/data"
+	"zuno/cmd/utils"
 
 	"github.com/ettle/strcase"
 	"github.com/gertd/go-pluralize"
@@ -50,30 +50,16 @@ type AddFieldsToHandlerData struct {
 // AddNewHandler adds default handlers for a new module
 func AddNewHandler(packageName, moduleName string) error {
 	data, err := prepareNewHandlerData(packageName, moduleName)
-	if err != nil {
-		return err
-	}
-	tmplContent, err := loadTemplate("new_handler")
-	if err != nil {
-		return err
-	}
-	wd, err := os.Getwd()
-	if err != nil {
-		return err
-	}
-	filePath := path.Join(wd, pathToHandlers, data.FileName)
-	tmpl, err := template.New(filePath).Parse(tmplContent)
+
 	if err != nil {
 		return err
 	}
 
-	file, err := os.Create(filePath)
-	if err != nil {
-		return err
-	}
-	defer file.Close()
-
-	return tmpl.Execute(file, data)
+	err = utils.CreateFromTemplate(
+		templates, "templates/new_handler.gotmpl",
+		path.Join(pathToHandlers, data.FileName), data,
+	)
+	return err
 }
 
 // RegisterNewHandler registers a new handler into the Handlers wrapper / struct

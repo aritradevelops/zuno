@@ -7,8 +7,8 @@ import (
 	"go/token"
 	"os"
 	"path"
-	"text/template"
 	"zuno/cmd/data"
+	"zuno/cmd/utils"
 
 	"github.com/ettle/strcase"
 )
@@ -39,27 +39,10 @@ func AddNewRepository(packageName string, module string) error {
 	if err != nil {
 		return err
 	}
-	tmplContent, err := loadTemplate("new_repository")
-	if err != nil {
-		return err
-	}
-	wd, err := os.Getwd()
-	if err != nil {
-		return err
-	}
-	filePath := path.Join(wd, pathToRepository, data.FileName)
-	tmpl, err := template.New(filePath).Parse(tmplContent)
-	if err != nil {
-		return err
-	}
-
-	file, err := os.Create(filePath)
-	if err != nil {
-		return err
-	}
-	defer file.Close()
-
-	return tmpl.Execute(file, data)
+	return utils.CreateFromTemplate(
+		templates, "templates/new_repository.gotmpl",
+		path.Join(pathToRepository, data.FileName), data,
+	)
 }
 
 // RegisterNewService registers a new service into the Services wrapper / struct

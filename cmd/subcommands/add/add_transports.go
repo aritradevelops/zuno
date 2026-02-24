@@ -4,6 +4,7 @@ import (
 	"zuno/cmd/app"
 	"zuno/cmd/config"
 	"zuno/cmd/generators/fiber"
+	"zuno/pkg/logger"
 
 	"github.com/spf13/cobra"
 )
@@ -15,7 +16,7 @@ var addTransportsCmd = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 		config := app.Ctx.Config
 		if config == nil {
-			cmd.Println("No config found")
+			logger.Info("No config found")
 			return
 		}
 
@@ -25,28 +26,31 @@ var addTransportsCmd = &cobra.Command{
 
 func addTransports(config *config.Config, modules []string, cmd *cobra.Command) {
 	for _, module := range modules {
-		for _, transport := range config.Transports {
-			if transport.Type == "http" {
-				if transport.Provider == "fiber" {
-					if err := fiber.AddNewHandler(config.PackageName, module); err != nil {
-						cmd.PrintErrln("failed to add new handler:", err)
-						return
-					}
+		if config.Transport.Http.Enabled {
+			switch config.Transport.Http.Provider {
+			case "fiber":
+				if err := fiber.AddNewHandler(config.Package, module); err != nil {
+					logger.Error("failed to add new handler:", "err", err)
+					return
+				}
+				if err := fiber.RegisterNewHandler(module); err != nil {
+					logger.Error("failed to register new handler:", "err", err)
+					return
+				}
 
-					if err := fiber.AddNewRouter(config.PackageName, module); err != nil {
-						cmd.PrintErrln("failed to add new router:", err)
-						return
-					}
+				if err := fiber.AddNewRouter(config.Package, module); err != nil {
+					logger.Error("failed to add new router:", "err", err)
+					return
+				}
 
-					if err := fiber.RegisterNewRouter(module); err != nil {
-						cmd.PrintErrln("failed to register new router:", err)
-						return
-					}
+				if err := fiber.RegisterNewRouter(module); err != nil {
+					logger.Error("failed to register new router:", "err", err)
+					return
 				}
 			}
 		}
 	}
-	cmd.Println("Transports added successfully")
+	logger.Info("Transports added successfully")
 }
 
 func init() {

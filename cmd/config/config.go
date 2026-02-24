@@ -6,25 +6,51 @@ import (
 	"github.com/knadh/koanf/parsers/yaml"
 	"github.com/knadh/koanf/providers/env"
 	"github.com/knadh/koanf/providers/file"
+	"github.com/knadh/koanf/providers/structs"
 	"github.com/knadh/koanf/v2"
 )
 
 var k = koanf.New(".")
 
 type Config struct {
-	PackageName string      `koanf:"package_name"`
-	Adapters    []Adapter   `koanf:"adapters"`
-	Transports  []Transport `koanf:"transports"`
+	Package   string    `koanf:"package_name"`
+	Adapter   Adapter   `koanf:"adapter"`
+	Transport Transport `koanf:"transport"`
 }
 
 type Transport struct {
-	Type     string `koanf:"type"`
+	Http HttpTransport `koanf:"http"`
+	Grpc GrpcTransport `koanf:"grpc"`
+	Ws   WsTransport   `koanf:"ws"`
+}
+
+type HttpTransport struct {
+	Enabled  bool   `koanf:"enabled"`
+	Provider string `koanf:"provider"`
+}
+
+type GrpcTransport struct {
+	Enabled  bool   `koanf:"enabled"`
+	Provider string `koanf:"provider"`
+}
+
+type WsTransport struct {
+	Enabled  bool   `koanf:"enabled"`
 	Provider string `koanf:"provider"`
 }
 
 type Adapter struct {
-	Type     string `koanf:"type"`
+	Database DatabaseAdapter `koanf:"database"`
+}
+
+type DatabaseAdapter struct {
+	Enabled  bool   `koanf:"enabled"`
 	Provider string `koanf:"provider"`
+}
+
+func (c *Config) ToYaml() ([]byte, error) {
+	k.Load(structs.Provider(c, "koanf"), nil)
+	return k.Marshal(yaml.Parser())
 }
 
 func Load(path string) (*Config, error) {

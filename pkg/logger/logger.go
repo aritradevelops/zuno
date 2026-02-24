@@ -3,39 +3,19 @@ package logger
 import (
 	"os"
 
-	"github.com/rs/zerolog"
+	"github.com/charmbracelet/log"
 )
 
-var instance zerolog.Logger
+var instance log.Logger
 
 func init() {
-	if os.Getenv("ENV") == "production" {
-		instance = zerolog.New(os.Stdout).With().Timestamp().Logger()
-	} else {
-		instance = zerolog.New(zerolog.ConsoleWriter{Out: os.Stdout}).With().Timestamp().Logger()
-	}
+	instance = *log.NewWithOptions(os.Stdout, log.Options{
+		ReportTimestamp: false,
+	})
 }
 
-func Debug() *zerolog.Event {
-	return instance.Debug()
-}
-
-func Info() *zerolog.Event {
-	return instance.Info()
-}
-
-func Warn() *zerolog.Event {
-	return instance.Warn()
-}
-
-func Error() *zerolog.Event {
-	return instance.Error()
-}
-
-func Fatal() *zerolog.Event {
-	return instance.Fatal()
-}
-
-func Panic() *zerolog.Event {
-	return instance.Panic()
-}
+var Info = instance.Info
+var Debug = instance.Debug
+var Warn = instance.Warn
+var Error = instance.Error
+var Fatal = instance.Fatal

@@ -30,7 +30,7 @@ func New{{.RepositoryType}}(client *mongo.Client, db *mongo.Database) repository
 
 // List implements repository.{{.RepositoryType}}.
 func (r *{{.RepositoryType}}) List(ctx context.Context, actor *action.Actor, opts *pagination.Options) (*pagination.Result[*repository.{{.Module}}], error) {
-	{{.VariablePlural}}, info, err := paginate[*{{.Module}}](ctx, r.collection, actor, opts)
+	{{.VariablePlural}}, info, err := paginate[*{{.Module}}](ctx, r.collection, actor, opts, {{.Module}}SearchFields)
 	if err != nil {
 		return nil, repository.NewDatabaseQueryError("list {{.ReadablePlural}}", err)
 	}

@@ -10,10 +10,20 @@ import (
 	"zuno/cmd/generators/mongodb"
 	"zuno/cmd/generators/repository"
 	"zuno/cmd/generators/service"
+	"zuno/pkg/logger"
 
 	"github.com/charmbracelet/huh"
 	"github.com/spf13/cobra"
 )
+
+var fieldTypes = []string{
+	"string",
+	"int",
+	"float64",
+	"bool",
+	"bson.ObjectID",
+	"*bson.ObjectID",
+}
 
 var addFieldsCmd = &cobra.Command{
 	Use:   "fields [module]",
@@ -22,13 +32,16 @@ var addFieldsCmd = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 		config := app.Ctx.Config
 		if config == nil {
-			cmd.Println("No config found")
+			logger.Info("No config found")
 			return
 		}
 
 		var fields []data.Field
 		addAnother := true
-
+		options := make([]huh.Option[string], 0)
+		for _, fieldType := range fieldTypes {
+			options = append(options, huh.NewOption(fieldType, fieldType))
+		}
 		for addAnother {
 			var field data.Field
 
@@ -43,17 +56,9 @@ var addFieldsCmd = &cobra.Command{
 					huh.NewInput().
 						Title("data.Field name").
 						Value(&field.Name),
-
 					huh.NewSelect[string]().
 						Title("data.Field type").
-						Options(
-							huh.NewOption("string", "string"),
-							huh.NewOption("int", "int"),
-							huh.NewOption("float64", "float64"),
-							huh.NewOption("bool", "bool"),
-							huh.NewOption("bson.ObjectID", "bson.ObjectID"),
-							huh.NewOption("*bson.ObjectID", "*bson.ObjectID"),
-						).
+						Options(options...).
 						Value(&field.Type),
 				),
 			).Run(); err != nil {
@@ -71,7 +76,7 @@ var addFieldsCmd = &cobra.Command{
 		}
 
 		addFields(config, args[0], fields, cmd)
-		cmd.Println("Fields added successfully")
+		logger.Info("Fields added successfully")
 	},
 }
 
@@ -92,25 +97,25 @@ func formatFieldsPreview(fields []data.Field) string {
 func addFields(config *config.Config, module string, fields []data.Field, cmd *cobra.Command) {
 	err := repository.AddFieldsToRepository(module, fields)
 	if err != nil {
-		cmd.Println("Error adding fields:", err)
+		logger.Error("Error adding fields:", "err", err)
 		return
 	}
 
 	err = service.AddFieldsToService(module, fields)
 	if err != nil {
-		cmd.Println("Error adding fields:", err)
+		logger.Error("Error adding fields:", "err", err)
 		return
 	}
 
 	err = mongodb.AddFieldsToModel(module, fields)
 	if err != nil {
-		cmd.Println("Error adding fields:", err)
+		logger.Error("Error adding fields:", "err", err)
 		return
 	}
 
 	err = fiber.AddFieldsToHandler(module, fields)
 	if err != nil {
-		cmd.Println("Error adding fields:", err)
+		logger.Error("Error adding fields:", "err", err)
 		return
 	}
 

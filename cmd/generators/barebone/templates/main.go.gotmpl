@@ -1,0 +1,14 @@
+package main
+
+import (
+	"{{.Package}}/cmd/api"
+	"{{.Package}}/pkg/logger"
+	"os"
+)
+
+func main() {
+	if err := api.Run(); err != nil {
+		logger.Error().Err(err).Msg("failed to run the api")
+		os.Exit(1)
+	}
+}

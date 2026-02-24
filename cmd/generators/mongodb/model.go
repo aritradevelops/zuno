@@ -5,10 +5,10 @@ import (
 	"go/format"
 	"go/parser"
 	"go/token"
-	"html/template"
 	"os"
 	"path"
 	"zuno/cmd/data"
+	"zuno/cmd/utils"
 
 	"github.com/ettle/strcase"
 )
@@ -31,27 +31,10 @@ func AddNewModel(packageName, module string) error {
 	if err != nil {
 		return err
 	}
-	tmplContent, err := loadTemplate("new_model")
-	if err != nil {
-		return err
-	}
-	wd, err := os.Getwd()
-	if err != nil {
-		return err
-	}
-	filePath := path.Join(wd, pathToModel, data.FileName)
-	tmpl, err := template.New(filePath).Parse(tmplContent)
-	if err != nil {
-		return err
-	}
-
-	file, err := os.Create(filePath)
-	if err != nil {
-		return err
-	}
-	defer file.Close()
-
-	return tmpl.Execute(file, data)
+	return utils.CreateFromTemplate(
+		templates, "templates/new_model.gotmpl",
+		path.Join(pathToModel, data.FileName), data,
+	)
 }
 
 // AddFieldsToModel adds fields to the model

@@ -9,8 +9,8 @@ import (
 	"os"
 	"path"
 	"strings"
-	"text/template"
 	"zuno/cmd/data"
+	"zuno/cmd/utils"
 
 	"github.com/ettle/strcase"
 	"github.com/gertd/go-pluralize"
@@ -51,27 +51,10 @@ func AddNewService(packageName string, module string) error {
 	if err != nil {
 		return err
 	}
-	tmplContent, err := loadTemplate("new_service")
-	if err != nil {
-		return err
-	}
-	wd, err := os.Getwd()
-	if err != nil {
-		return err
-	}
-	filePath := path.Join(wd, pathToService, data.FileName)
-	tmpl, err := template.New(filePath).Parse(tmplContent)
-	if err != nil {
-		return err
-	}
-
-	file, err := os.Create(filePath)
-	if err != nil {
-		return err
-	}
-	defer file.Close()
-
-	return tmpl.Execute(file, data)
+	return utils.CreateFromTemplate(
+		templates, "templates/new_service.gotmpl",
+		path.Join(pathToService, data.FileName), data,
+	)
 }
 
 // RegisterNewService registers a new service into the Services wrapper / struct

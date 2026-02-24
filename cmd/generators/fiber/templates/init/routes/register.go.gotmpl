@@ -1,0 +1,12 @@
+package routes
+
+import (
+	"{{.Package}}/internal/transports/http/handler"
+	"{{.Package}}/internal/transports/http/middlewares"
+
+	"github.com/gofiber/fiber/v3"
+)
+
+func Register(app fiber.Router, handlers *handler.Handlers) {
+	authMiddleware := middlewares.AuthMiddleware()
+}

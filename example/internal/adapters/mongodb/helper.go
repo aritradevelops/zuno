@@ -23,7 +23,7 @@ func getSortOrder(order pagination.SortOrder) int {
 	return -1
 }
 
-func paginate[T any](ctx context.Context, collection *mongo.Collection, actor *action.Actor, opts *pagination.Options) ([]T, *pagination.Info, error) {
+func paginate[T any](ctx context.Context, collection *mongo.Collection, actor *action.Actor, opts *pagination.Options, searchFields []string) ([]T, *pagination.Info, error) {
 	// build the $match stage
 	filter := bson.D{}
 	// handle trash option
@@ -38,8 +38,8 @@ func paginate[T any](ctx context.Context, collection *mongo.Collection, actor *a
 	}
 	applyFilter(filter, actor)
 	// handle search option
-	if opts.Search != "" && len(UserSearchFields) > 0 {
-		for _, field := range UserSearchFields {
+	if opts.Search != "" && len(searchFields) > 0 {
+		for _, field := range searchFields {
 			filter = append(filter, bson.E{
 				Key: field,
 				Value: bson.D{

@@ -6,10 +6,11 @@ import (
 	"go/format"
 	"go/parser"
 	"go/token"
-	"html/template"
 	"os"
 	"path"
 	"strings"
+	"zuno/cmd/utils"
+	"zuno/pkg/logger"
 
 	"github.com/ettle/strcase"
 	"github.com/gertd/go-pluralize"
@@ -40,27 +41,10 @@ func AddNewRepository(packageName string, module string) error {
 	if err != nil {
 		return err
 	}
-	tmplContent, err := loadTemplate("new_repository")
-	if err != nil {
-		return err
-	}
-	wd, err := os.Getwd()
-	if err != nil {
-		return err
-	}
-	filePath := path.Join(wd, pathToRepository, data.FileName)
-	tmpl, err := template.New(filePath).Parse(tmplContent)
-	if err != nil {
-		return err
-	}
-
-	file, err := os.Create(filePath)
-	if err != nil {
-		return err
-	}
-	defer file.Close()
-
-	return tmpl.Execute(file, data)
+	return utils.CreateFromTemplate(
+		templates, "templates/new_repository.gotmpl",
+		path.Join(pathToRepository, data.FileName), data,
+	)
 }
 
 // RegisterNewService registers a new service into the Services wrapper / struct
@@ -91,7 +75,6 @@ func RegisterNewRepository(module string) error {
 
 		// ---- Modify constructor `func NewRepositories(...) *Repositories`
 		if fn, ok := n.(*ast.FuncDecl); ok && fn.Name.Name == "NewRepositories" {
-
 			ast.Inspect(fn.Body, func(n ast.Node) bool {
 				ret, ok := n.(*ast.ReturnStmt)
 				if !ok || len(ret.Results) != 1 {
@@ -109,16 +92,11 @@ func RegisterNewRepository(module string) error {
 					return true
 				}
 
-				// Ensure it's Repositories{}
-				ident, ok := cl.Type.(*ast.Ident)
-				if !ok || ident.Name != "Repositories" {
-					return true
-				}
-
 				// Prevent duplicate key
 				for _, elt := range cl.Elts {
 					if kv, ok := elt.(*ast.KeyValueExpr); ok {
 						if key, ok := kv.Key.(*ast.Ident); ok && key.Name == data.Module {
+							logger.Info("found duplicate key")
 							return false
 						}
 					}

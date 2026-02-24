@@ -3,6 +3,7 @@ package add
 import (
 	"zuno/cmd/app"
 	"zuno/cmd/config"
+	"zuno/pkg/logger"
 
 	"github.com/spf13/cobra"
 )
@@ -14,11 +15,11 @@ var addModulesCmd = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 		config := app.Ctx.Config
 		if config == nil {
-			cmd.Println("No config found")
+			logger.Error("No config found")
 			return
 		}
 		addModules(config, args, cmd)
-		cmd.Println("Modules added successfully")
+		logger.Info("Modules added successfully")
 	},
 }
 
