@@ -128,7 +128,7 @@ func (r *UserRepository) DeleteByID(ctx context.Context, actor *action.Actor, id
 // DestroyByID implements repository.UserRepository.
 func (r *UserRepository) DestroyByID(ctx context.Context, actor *action.Actor, id uuid.UUID) (bool, error) {
 	filter := bson.D{
-		{Key: "uid", Value: id}, {Key: "deleted_at", Value: nil},
+		{Key: "uid", Value: id},
 	}
 	applyFilter(filter, actor)
 	result, err := r.collection.DeleteOne(ctx, filter)
@@ -151,7 +151,6 @@ func (r *UserRepository) RestoreByID(ctx context.Context, actor *action.Actor, i
 		"updated_at": time.Now(),
 		"updated_by": actor.UID,
 		"deleted_at": nil,
-		"deleted_by": actor.UID,
 	}})
 	if err != nil {
 		return false, repository.NewDatabaseUpdateError("restore user", err)
