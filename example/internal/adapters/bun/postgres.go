@@ -1,0 +1,57 @@
+package bun
+
+import (
+	"context"
+	"goserve/internal/db"
+
+	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/jackc/pgx/v5/stdlib"
+	"github.com/uptrace/bun"
+	"github.com/uptrace/bun/dialect/pgdialect"
+	"github.com/uptrace/bun/extra/bundebug"
+)
+
+var _ db.Database = &Postgres{}
+
+type Postgres struct {
+	db *bun.DB
+}
+
+func New(connStr string) (*Postgres, error) {
+	conf, err := pgxpool.ParseConfig(connStr)
+	if err != nil {
+		return nil, err
+	}
+
+	conf.ConnConfig.DefaultQueryExecMode = pgx.QueryExecModeSimpleProtocol
+
+	pool, err := pgxpool.NewWithConfig(context.Background(), conf)
+	if err != nil {
+		return nil, err
+	}
+
+	sqldb := stdlib.OpenDBFromPool(pool)
+	db := bun.NewDB(sqldb, pgdialect.New())
+	db.AddQueryHook(bundebug.NewQueryHook(bundebug.WithVerbose(true)))
+	return &Postgres{db: db}, nil
+}
+
+// Connect implements [db.Database].
+func (p *Postgres) Connect(context.Context) error {
+	return p.db.Ping()
+}
+
+// Disconnect implements [db.Database].
+func (p *Postgres) Disconnect(context.Context) error {
+	return p.db.Close()
+}
+
+// Ping implements [db.Database].
+func (p *Postgres) Ping(context.Context) error {
+	return p.db.Ping()
+}
+
+func (p *Postgres) DB() *bun.DB {
+	return p.db
+}

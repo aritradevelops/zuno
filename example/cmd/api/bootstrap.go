@@ -3,7 +3,7 @@ package api
 import (
 	"context"
 	"fmt"
-	"goserve/internal/adapters/mongodb"
+	"goserve/internal/adapters/bun"
 	"goserve/internal/config"
 	"goserve/internal/service"
 	"goserve/internal/transports/http"
@@ -22,7 +22,7 @@ func Run() error {
 	setupCtx, cancel := context.WithTimeout(context.Background(), config.Timeout)
 	defer cancel()
 
-	db, err := mongodb.New(config.Database.Connection.Url)
+	db, err := bun.New(config.Database.Connection.Url)
 	if err != nil {
 		return fmt.Errorf("failed to create database: %w", err)
 	}
@@ -31,7 +31,7 @@ func Run() error {
 		return fmt.Errorf("failed to connect to database: %w", err)
 	}
 
-	repositories := mongodb.NewRepositories(db.Client(), db.Database())
+	repositories := bun.NewRepositories(db.DB())
 	services := service.New(repositories)
 	s := http.NewServer(config, services)
 	quitCh := make(chan os.Signal, 1)

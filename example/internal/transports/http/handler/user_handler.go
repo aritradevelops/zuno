@@ -28,8 +28,9 @@ func NewUserHandler(userService service.UserService) *UserHandler {
 }
 
 type UserFields struct {
-	Email string `json:"email" example:"user@example.com"`
-	Name  string `json:"name" example:"Demo"`
+	Email string  `json:"email" example:"user@example.com"`
+	Name  string  `json:"name" example:"Demo"`
+	Dp    *string `json:"dp,omitempty" example:"https://example.com/dp.jpg"`
 }
 
 type User struct {

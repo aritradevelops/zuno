@@ -8,8 +8,9 @@ import (
 )
 
 type UserFields struct {
-	Email string `bson:"email,omitempty"`
-	Name  string `bson:"name"`
+	Email string  `bson:"email,omitempty"`
+	Name  string  `bson:"name"`
+	Dp    *string `bson:"dp,omitempty"`
 }
 
 type User struct {
