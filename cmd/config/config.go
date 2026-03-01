@@ -13,9 +13,10 @@ import (
 var k = koanf.New(".")
 
 type Config struct {
-	Package   string    `koanf:"package_name"`
-	Adapter   Adapter   `koanf:"adapter"`
-	Transport Transport `koanf:"transport"`
+	Package     string    `koanf:"package_name"`
+	PackageBase string    `koanf:"package_base"`
+	Adapter     Adapter   `koanf:"adapter"`
+	Transport   Transport `koanf:"transport"`
 }
 
 type Transport struct {
@@ -44,6 +45,12 @@ type Adapter struct {
 }
 
 type DatabaseAdapter struct {
+	Enabled   bool            `koanf:"enabled"`
+	Provider  string          `koanf:"provider"`
+	Migration MigrationConfig `koanf:"migration"`
+}
+
+type MigrationConfig struct {
 	Enabled  bool   `koanf:"enabled"`
 	Provider string `koanf:"provider"`
 }

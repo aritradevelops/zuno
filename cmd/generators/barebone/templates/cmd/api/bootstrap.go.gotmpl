@@ -3,7 +3,12 @@ package api
 import (
 	"context"
 	"fmt"
+	{{if eq .Adapter.Database.Provider  "bun"}}
+	"{{.Package}}/internal/adapters/bun"
+	{{end}}
+	{{if eq .Adapter.Database.Provider  "mongodb"}}
 	"{{.Package}}/internal/adapters/mongodb"
+	{{end}}
 	"{{.Package}}/internal/config"
 	"{{.Package}}/internal/service"
 	"{{.Package}}/internal/transports/http"
@@ -21,7 +26,7 @@ func Run() error {
 	}
 	setupCtx, cancel := context.WithTimeout(context.Background(), config.Timeout)
 	defer cancel()
-	{{if .Adapter.Database.Enabled}}
+	{{if eq .Adapter.Database.Provider  "mongodb"}}
 	db, err:= mongodb.New(config.Database.Connection.Url)
 	if err != nil {
 		return fmt.Errorf("failed to create database: %w", err)
@@ -32,10 +37,21 @@ func Run() error {
 	}
 
 	repositories := mongodb.NewRepositories(db.Client(), db.Database())
-	services := service.New(repositories)
+	{{else if eq .Adapter.Database.Provider  "bun"}}
+		db, err := bun.New(config.Database.Connection.Url)
+	if err != nil {
+		return fmt.Errorf("failed to create database: %w", err)
+	}
+	logger.Info().Msg("connected to database successfully!")
+	if err := db.Connect(setupCtx); err != nil {
+		return fmt.Errorf("failed to connect to database: %w", err)
+	}
+
+	repositories := bun.NewRepositories(db.DB())
 	{{else}}
-	services := service.New(nil)
+	repositories := nil
 	{{end}}
+	services := service.New(repositories)
 	s := http.NewServer(config, services)
 	quitCh := make(chan os.Signal, 1)
 	signal.Notify(quitCh, syscall.SIGINT, syscall.SIGTERM)

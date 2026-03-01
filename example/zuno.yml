@@ -12,4 +12,7 @@ transport:
 adapters:
   database:
     enabled: true
-    provider: "mongodb"
+    provider: "bun"
+    migration:
+      enabled: true
+      provider: "goose"

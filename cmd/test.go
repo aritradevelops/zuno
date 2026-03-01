@@ -4,10 +4,7 @@ Copyright © 2026 NAME HERE <EMAIL ADDRESS>
 package cmd
 
 import (
-	"zuno/cmd/generators/fiber"
-	"zuno/cmd/generators/mongodb"
-	"zuno/cmd/generators/repository"
-	"zuno/cmd/generators/service"
+	"zuno/cmd/generators/goose"
 	"zuno/pkg/logger"
 
 	"github.com/spf13/cobra"
@@ -21,58 +18,63 @@ var testCmd = &cobra.Command{
 and usage of using your command.`,
 	Run: func(cmd *cobra.Command, args []string) {
 
-		if err := mongodb.AddNewModel("goserve", "ProductVariant"); err != nil {
-			cmd.PrintErrln("failed to add new model:", err)
-			return
-		}
+		// if err := mongodb.AddNewModel("goserve", "ProductVariant"); err != nil {
+		// 	cmd.PrintErrln("failed to add new model:", err)
+		// 	return
+		// }
 
-		if err := mongodb.AddNewRepository("goserve", "ProductVariant"); err != nil {
-			cmd.PrintErrln("failed to add new repository:", err)
-			return
-		}
+		// if err := mongodb.AddNewRepository("goserve", "ProductVariant"); err != nil {
+		// 	cmd.PrintErrln("failed to add new repository:", err)
+		// 	return
+		// }
 
-		if err := mongodb.RegisterNewRepository("ProductVariant"); err != nil {
-			cmd.PrintErrln("failed to register new repository:", err)
-			return
-		}
+		// if err := mongodb.RegisterNewRepository("ProductVariant"); err != nil {
+		// 	cmd.PrintErrln("failed to register new repository:", err)
+		// 	return
+		// }
 
-		if err := repository.AddNewRepository("goserve", "ProductVariant"); err != nil {
-			cmd.PrintErrln("failed to add new repository:", err)
-			return
-		}
+		// if err := repository.AddNewRepository("goserve", "ProductVariant"); err != nil {
+		// 	cmd.PrintErrln("failed to add new repository:", err)
+		// 	return
+		// }
 
-		if err := repository.RegisterNewRepository("ProductVariant"); err != nil {
-			cmd.PrintErrln("failed to register new repository:", err)
-			return
-		}
+		// if err := repository.RegisterNewRepository("ProductVariant"); err != nil {
+		// 	cmd.PrintErrln("failed to register new repository:", err)
+		// 	return
+		// }
 
-		if err := service.AddNewService("goserve", "ProductVariant"); err != nil {
-			cmd.PrintErrln("failed to add new service:", err)
-			return
-		}
+		// if err := service.AddNewService("goserve", "ProductVariant"); err != nil {
+		// 	cmd.PrintErrln("failed to add new service:", err)
+		// 	return
+		// }
 
-		if err := service.RegisterNewService("ProductVariant"); err != nil {
-			cmd.PrintErrln("failed to register new service:", err)
-			return
-		}
+		// if err := service.RegisterNewService("ProductVariant"); err != nil {
+		// 	cmd.PrintErrln("failed to register new service:", err)
+		// 	return
+		// }
 
-		if err := fiber.AddNewHandler("goserve", "ProductVariant"); err != nil {
-			cmd.PrintErrln("failed to add new handler:", err)
-			return
-		}
+		// if err := fiber.AddNewHandler("goserve", "ProductVariant"); err != nil {
+		// 	cmd.PrintErrln("failed to add new handler:", err)
+		// 	return
+		// }
 
-		if err := fiber.RegisterNewHandler("ProductVariant"); err != nil {
-			cmd.PrintErrln("failed to register new handler:", err)
-			return
-		}
+		// if err := fiber.RegisterNewHandler("ProductVariant"); err != nil {
+		// 	cmd.PrintErrln("failed to register new handler:", err)
+		// 	return
+		// }
 
-		if err := fiber.AddNewRouter("goserve", "ProductVariant"); err != nil {
-			cmd.PrintErrln("failed to add new router:", err)
-			return
-		}
+		// if err := fiber.AddNewRouter("goserve", "ProductVariant"); err != nil {
+		// 	cmd.PrintErrln("failed to add new router:", err)
+		// 	return
+		// }
 
-		if err := fiber.RegisterNewRouter("ProductVariant"); err != nil {
-			cmd.PrintErrln("failed to register new router:", err)
+		// if err := fiber.RegisterNewRouter("ProductVariant"); err != nil {
+		// 	cmd.PrintErrln("failed to register new router:", err)
+		// 	return
+		// }
+
+		if err := goose.AddNewCreateTableMigration("goserve", "ProductVariant", "internal/adapters/bun/migrations"); err != nil {
+			cmd.PrintErrln("failed to add new migration:", err)
 			return
 		}
 

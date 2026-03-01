@@ -3,9 +3,12 @@ package init
 import (
 	"fmt"
 	"os"
+	"path"
 	"zuno/cmd/config"
 	"zuno/cmd/generators/barebone"
+	"zuno/cmd/generators/bun"
 	"zuno/cmd/generators/fiber"
+	"zuno/cmd/generators/goose"
 	"zuno/cmd/generators/mongodb"
 	"zuno/cmd/utils"
 	"zuno/pkg/logger"
@@ -15,11 +18,12 @@ import (
 )
 
 var (
-	packageName     string
-	databaseAdapter string
-	httpProvider    string
-	grpcProvider    string
-	wsProvider      string
+	packageName       string
+	databaseAdapter   string
+	migrationProvider string
+	httpProvider      string
+	grpcProvider      string
+	wsProvider        string
 )
 
 var directCloneDirs = []string{"locales"}
@@ -47,7 +51,7 @@ var initCmd = &cobra.Command{
 					Title("Choose database adapter").
 					Options(
 						huh.NewOption("mongodb", "mongodb"),
-						huh.NewOption("postgres", "postgres"),
+						huh.NewOption("bun", "bun"),
 					).
 					Value(&databaseAdapter),
 			)
@@ -97,12 +101,33 @@ var initCmd = &cobra.Command{
 				return err
 			}
 		}
+
+		if !cmd.Flags().Changed("migration-provider") && databaseAdapter != "mongodb" {
+			migrationProvider = "none"
+			if err := huh.NewForm(huh.NewGroup(
+				huh.NewSelect[string]().
+					Title("Select migration provider").
+					Options(
+						huh.NewOption("goose", "goose"),
+						huh.NewOption("none", "none"),
+					).
+					Value(&migrationProvider),
+			)).Run(); err != nil {
+				return err
+			}
+		}
+
 		config := &config.Config{
-			Package: packageName,
+			Package:     packageName,
+			PackageBase: path.Base(packageName),
 			Adapter: config.Adapter{
 				Database: config.DatabaseAdapter{
 					Enabled:  true,
 					Provider: databaseAdapter,
+					Migration: config.MigrationConfig{
+						Enabled:  migrationProvider != "none",
+						Provider: migrationProvider,
+					},
 				},
 			},
 			Transport: config.Transport{
@@ -124,9 +149,10 @@ var initCmd = &cobra.Command{
 			logger.Info(fmt.Sprintf(`
 Re-run with : zuno init --package=%s \
 --database-adapter=%s \
+--migration-provider=%s \
 --http-provider=%s \
 --grpc-provider=%s \
---ws-provider=%s`, packageName, databaseAdapter, httpProvider, grpcProvider, wsProvider))
+--ws-provider=%s`, packageName, databaseAdapter, migrationProvider, httpProvider, grpcProvider, wsProvider))
 		}()
 
 		return initializeNewProject(config, verbose)
@@ -168,10 +194,18 @@ func initializeNewProject(config *config.Config, verbose bool) error {
 			if err := mongodb.Initialize(config); err != nil {
 				return err
 			}
-			// case "postgres":
-			// 	if err := postgres.InitializePostgres(config); err != nil {
-			// 		return err
-			// 	}
+		case "bun":
+			logger.Info("Initializing bun...")
+			if err := bun.Initialize(config); err != nil {
+				return err
+			}
+		}
+
+		if config.Adapter.Database.Migration.Enabled {
+			logger.Info("Initializing migration...")
+			if err := goose.Initialize(config, verbose); err != nil {
+				return err
+			}
 		}
 
 	}
@@ -230,5 +264,12 @@ func init() {
 		"ws-provider",
 		"",
 		"WebSocket provider (gorilla|gorilla-mux)",
+	)
+
+	initCmd.Flags().StringVar(
+		&migrationProvider,
+		"migration-provider",
+		"",
+		"Migration provider (goose)",
 	)
 }

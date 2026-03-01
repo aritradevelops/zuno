@@ -1,0 +1,164 @@
+package bun
+
+import (
+	"context"
+	"database/sql"
+	"{{.Package}}/internal/action"
+	"{{.Package}}/internal/pagination"
+	"{{.Package}}/internal/repository"
+	"time"
+
+	"github.com/google/uuid"
+	"github.com/uptrace/bun"
+)
+
+type {{.RepositoryType}} struct {
+	db *bun.DB
+}
+
+func New{{.RepositoryType}}(db *bun.DB) repository.{{.RepositoryType}} {
+	return &{{.RepositoryType}}{db: db}
+}
+
+// List implements [repository.{{.RepositoryType}}].
+func (u *{{.RepositoryType}}) List(ctx context.Context, actor *action.Actor, opts *pagination.Options) (*pagination.Result[*repository.User], error) {
+	{{.VariablePlural}}, info, err := paginate[*User](ctx, u.db, actor, opts, {{.Module}}SearchFields)
+	if err != nil {
+		return nil, repository.NewDatabaseQueryError("list users", err)
+	}
+	data := make([]*repository.{{.Module}}, len({{.VariablePlural}}))
+	for idx, {{.Variable}} := range {{.VariablePlural}} {
+		data[idx] = {{.Variable}}.toRepository()
+	}
+	return &pagination.Result[*repository.{{.Module}}]{
+		Data: data,
+		Info: *info,
+	}, nil
+}
+
+// Create implements [repository.{{.RepositoryType}}].
+func (u *{{.RepositoryType}}) Create(ctx context.Context, actor *action.Actor, payload repository.{{.Module}}Fields) (*repository.{{.Module}}, error) {
+	fields := ({{.FieldsType}})(payload)
+	{{.Variable}} := &{{.Module}}{
+		UID:        uuid.New(),
+		UserFields: fields,
+		CreatedAt:  time.Now(),
+		CreatedBy:  actor.UID,
+		UpdatedAt:  time.Now(),
+		UpdatedBy:  actor.UID,
+	}
+
+	_, err := u.db.NewInsert().Model({{.Variable}}).Exec(ctx)
+	if err != nil {
+		return nil, repository.NewDatabaseQueryError("create {{.Readable}}", err)
+	}
+	return {{.Variable}}.toRepository(), nil
+}
+
+// FindByID implements [repository.{{.RepositoryType}}].
+func (u *{{.RepositoryType}}) FindByID(ctx context.Context, actor *action.Actor, id uuid.UUID) (*repository.{{.Module}}, error) {
+	{{.Variable}} := &{{.Module}}{}
+	err := u.db.NewSelect().
+		Model({{.Variable}}).
+		Where("uid = ?", id).
+		Where("deleted_at IS NULL").
+		ApplyQueryBuilder(scopedFilter(actor)).Scan(ctx)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return nil, repository.NewNotFoundError("{{.Readable}}", id.String())
+		}
+		return nil, repository.NewDatabaseQueryError("find {{.Readable}}", err)
+	}
+	return {{.Variable}}.toRepository(), nil
+}
+
+// UpdateByID implements [repository.{{.RepositoryType}}].
+func (u *{{.RepositoryType}}) UpdateByID(ctx context.Context, actor *action.Actor, id uuid.UUID, payload repository.{{.Module}}Fields) (bool, error) {
+	fields := ({{.FieldsType}})(payload)
+	{{.Variable}} := &{{.Module}}{
+		UID:        id,
+		{{.FieldsType}}: fields,
+		UpdatedAt:  time.Now(),
+		UpdatedBy:  actor.UID,
+	}
+	cols := append(fields.Fields(), "updated_at", "updated_by")
+	result, err := u.db.NewUpdate().
+		Model({{.Variable}}).
+		Column(cols...).
+		Where("uid = ?", id).
+		Where("deleted_at IS NULL").
+		ApplyQueryBuilder(scopedFilter(actor)).
+		Exec(ctx)
+	if err != nil {
+		return false, repository.NewDatabaseQueryError("update {{.Readable}}", err)
+	}
+
+	if count, err := result.RowsAffected(); err != nil {
+		return false, repository.NewDatabaseQueryError("update {{.Readable}}", err)
+	} else if count == 0 {
+		return false, repository.NewNotFoundError("{{.Readable}}", id.String())
+	}
+	return true, nil
+}
+
+// DeleteByID implements [repository.{{.RepositoryType}}].
+func (u *{{.RepositoryType}}) DeleteByID(ctx context.Context, actor *action.Actor, id uuid.UUID) (bool, error) {
+	result, err := u.db.NewUpdate().
+		Model(&{{.Module}}{}).
+		Set("deleted_at = ?", time.Now()).
+		Set("deleted_by = ?", actor.UID).
+		Where("uid = ?", id).
+		Where("deleted_at IS NULL").
+		ApplyQueryBuilder(scopedFilter(actor)).
+		Exec(ctx)
+	if err != nil {
+		return false, repository.NewDatabaseQueryError("delete {{.Readable}}", err)
+	}
+
+	if count, err := result.RowsAffected(); err != nil {
+		return false, repository.NewDatabaseQueryError("delete {{.Readable}}", err)
+	} else if count == 0 {
+		return false, repository.NewNotFoundError("{{.Readable}}", id.String())
+	}
+	return true, nil
+}
+
+// DestroyByID implements [repository.{{.RepositoryType}}].
+func (u *{{.RepositoryType}}) DestroyByID(ctx context.Context, actor *action.Actor, id uuid.UUID) (bool, error) {
+	result, err := u.db.NewDelete().
+		Model(&{{.Module}}{}).
+		Where("uid = ?", id).
+		ApplyQueryBuilder(scopedFilter(actor)).
+		Exec(ctx)
+	if err != nil {
+		return false, repository.NewDatabaseQueryError("delete {{.Readable}}", err)
+	}
+
+	if count, err := result.RowsAffected(); err != nil {
+		return false, repository.NewDatabaseQueryError("delete {{.Readable}}", err)
+	} else if count == 0 {
+		return false, repository.NewNotFoundError("{{.Readable}}", id.String())
+	}
+	return true, nil
+}
+
+// RestoreByID implements [repository.{{.RepositoryType}}].
+func (u *{{.RepositoryType}}) RestoreByID(ctx context.Context, actor *action.Actor, id uuid.UUID) (bool, error) {
+	result, err := u.db.NewUpdate().
+		Model(&{{.Module}}{}).
+		Set("deleted_at = NULL").
+		Where("uid = ?", id).
+		Where("deleted_at IS NOT NULL").
+		ApplyQueryBuilder(scopedFilter(actor)).
+		Exec(ctx)
+	if err != nil {
+		return false, repository.NewDatabaseQueryError("restore {{.Readable}}", err)
+	}
+
+	if count, err := result.RowsAffected(); err != nil {
+		return false, repository.NewDatabaseQueryError("restore {{.Readable}}", err)
+	} else if count == 0 {
+		return false, repository.NewNotFoundError("{{.Readable}}", id.String())
+	}
+	return true, nil
+}

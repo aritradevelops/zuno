@@ -1,0 +1,20 @@
+-- +goose Up
+-- +goose StatementBegin
+CREATE TABLE IF NOT EXISTS {{.Table}} (
+  id BIGINT PRIMARY KEY GENERATED ALWAYS AS IDENTITY,
+	uid UUID NOT NULL,
+	created_at TIMESTAMPTZ NOT NULL,
+	created_by UUID NOT NULL,
+	updated_at TIMESTAMPTZ NOT NULL,
+	updated_by UUID NOT NULL,
+	deleted_at TIMESTAMPTZ,
+	deleted_by UUID
+);
+CREATE INDEX idx_{{.Table}}_uid ON {{.Table}}(uid);
+-- +goose StatementEnd
+
+-- +goose Down
+-- +goose StatementBegin
+DROP INDEX IF EXISTS idx_{{.Table}}_uid;
+DROP TABLE IF EXISTS {{.Table}};
+-- +goose StatementEnd
