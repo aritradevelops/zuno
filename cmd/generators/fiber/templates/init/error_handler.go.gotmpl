@@ -69,7 +69,8 @@ func ErrorHandler() fiber.ErrorHandler {
 		if service.AsServiceError(e, &serviceErr) {
 			httpStatus := getHTTPStatusForServiceError(serviceErr)
 			c.Status(httpStatus)
-			return c.JSON(handler.Failure(translation.Localize(c, fmt.Sprintf("errors.%d", httpStatus)), serviceErr.Cause))
+			fmt.Println("serviceErr.Details", serviceErr.Details)
+			return c.JSON(handler.Failure(translation.Localize(c, fmt.Sprintf("errors.%d", httpStatus), serviceErr.Details), serviceErr))
 		}
 
 		maskedError := fmt.Errorf("something went wrong")
@@ -78,9 +79,7 @@ func ErrorHandler() fiber.ErrorHandler {
 		}
 		if err, ok := e.(*fiber.Error); ok {
 			c.Status(err.Code)
-			return c.JSON(handler.Failure(translation.Localize(c, fmt.Sprintf("errors.%d", err.Code), map[string]string{
-				"Resource": "Route",
-			}), maskedError))
+			return c.JSON(handler.Failure(translation.Localize(c, fmt.Sprintf("errors.%d", err.Code)), maskedError))
 		}
 		c.Status(httpb.StatusInternalServerError)
 		return c.JSON(handler.Failure("something went wrong! please try again later", maskedError))

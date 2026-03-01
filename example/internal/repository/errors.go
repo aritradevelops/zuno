@@ -21,10 +21,7 @@ const (
 	ErrDatabaseConnection RepositoryErrorCode = "DATABASE_CONNECTION_ERROR"
 	ErrDatabaseTimeout    RepositoryErrorCode = "DATABASE_TIMEOUT_ERROR"
 	ErrDatabaseQuery      RepositoryErrorCode = "DATABASE_QUERY_ERROR"
-	ErrDatabaseInsert     RepositoryErrorCode = "DATABASE_INSERT_ERROR"
-	ErrDatabaseUpdate     RepositoryErrorCode = "DATABASE_UPDATE_ERROR"
-	ErrDatabaseDelete     RepositoryErrorCode = "DATABASE_DELETE_ERROR"
-	ErrDatabaseNotFound   RepositoryErrorCode = "DATABASE_NOT_FOUND_ERROR"
+	ErrDataNotFound       RepositoryErrorCode = "DATA_NOT_FOUND_ERROR"
 
 	// Data validation errors
 	ErrInvalidData         RepositoryErrorCode = "INVALID_DATA_ERROR"
@@ -74,7 +71,7 @@ func NewDatabaseTimeoutError(operation string, timeout time.Duration, cause erro
 
 func NewNotFoundError(resource, id string) *RepositoryError {
 	return &RepositoryError{
-		Code:    ErrDatabaseNotFound,
+		Code:    ErrDataNotFound,
 		Message: fmt.Sprintf("%s with ID %s not found", resource, id),
 		Details: map[string]any{
 			"resource":  resource,
@@ -130,7 +127,7 @@ func IsNotFoundError(err error) bool {
 	if !errors.As(err, &repoErr) {
 		return false
 	}
-	return repoErr.Code == ErrDatabaseNotFound
+	return repoErr.Code == ErrDataNotFound
 }
 
 // IsDuplicateEntryError checks if an error is a duplicate entry error
@@ -156,42 +153,6 @@ func NewDatabaseQueryError(operation string, cause error) *RepositoryError {
 	return &RepositoryError{
 		Code:    ErrDatabaseQuery,
 		Message: fmt.Sprintf("Database query failed for operation '%s'", operation),
-		Cause:   cause,
-		Details: map[string]any{
-			"operation": operation,
-			"timestamp": time.Now().Format(time.RFC3339),
-		},
-	}
-}
-
-func NewDatabaseInsertError(operation string, cause error) *RepositoryError {
-	return &RepositoryError{
-		Code:    ErrDatabaseInsert,
-		Message: fmt.Sprintf("Database insert failed for operation '%s'", operation),
-		Cause:   cause,
-		Details: map[string]any{
-			"operation": operation,
-			"timestamp": time.Now().Format(time.RFC3339),
-		},
-	}
-}
-
-func NewDatabaseUpdateError(operation string, cause error) *RepositoryError {
-	return &RepositoryError{
-		Code:    ErrDatabaseUpdate,
-		Message: fmt.Sprintf("Database update failed for operation '%s'", operation),
-		Cause:   cause,
-		Details: map[string]any{
-			"operation": operation,
-			"timestamp": time.Now().Format(time.RFC3339),
-		},
-	}
-}
-
-func NewDatabaseDeleteError(operation string, cause error) *RepositoryError {
-	return &RepositoryError{
-		Code:    ErrDatabaseDelete,
-		Message: fmt.Sprintf("Database delete failed for operation '%s'", operation),
 		Cause:   cause,
 		Details: map[string]any{
 			"operation": operation,

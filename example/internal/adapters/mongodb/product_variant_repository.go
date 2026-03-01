@@ -57,7 +57,7 @@ func (r *ProductVariantRepository) Create(ctx context.Context, actor *action.Act
 	productVariant.UpdatedBy = actor.UID
 
 	if _, err := r.collection.InsertOne(ctx, productVariant); err != nil {
-		return nil, repository.NewDatabaseInsertError("create product variant", err)
+		return nil, repository.NewDatabaseQueryError("create product variant", err)
 	}
 	return productVariant.toRepository(), nil
 }
@@ -96,7 +96,7 @@ func (r *ProductVariantRepository) UpdateByID(ctx context.Context, actor *action
 	dataMap["updated_by"] = actor.UID
 	result, err := r.collection.UpdateOne(ctx, filter, bson.M{"$set": dataMap})
 	if err != nil {
-		return false, repository.NewDatabaseUpdateError("update product variant", err)
+		return false, repository.NewDatabaseQueryError("update product variant", err)
 	}
 	if result.ModifiedCount == 0 {
 		return false, repository.NewNotFoundError("ProductVariant", id.String())
@@ -117,7 +117,7 @@ func (r *ProductVariantRepository) DeleteByID(ctx context.Context, actor *action
 		"deleted_by": actor.UID,
 	}})
 	if err != nil {
-		return false, repository.NewDatabaseUpdateError("delete product variant", err)
+		return false, repository.NewDatabaseQueryError("delete product variant", err)
 	}
 	if result.ModifiedCount == 0 {
 		return false, repository.NewNotFoundError("ProductVariant", id.String())
@@ -133,7 +133,7 @@ func (r *ProductVariantRepository) DestroyByID(ctx context.Context, actor *actio
 	applyFilter(filter, actor)
 	result, err := r.collection.DeleteOne(ctx, filter)
 	if err != nil {
-		return false, repository.NewDatabaseDeleteError("destroy product variant", err)
+		return false, repository.NewDatabaseQueryError("destroy product variant", err)
 	}
 	if result.DeletedCount == 0 {
 		return false, repository.NewNotFoundError("ProductVariant", id.String())
@@ -154,7 +154,7 @@ func (r *ProductVariantRepository) RestoreByID(ctx context.Context, actor *actio
 		"deleted_by": actor.UID,
 	}})
 	if err != nil {
-		return false, repository.NewDatabaseUpdateError("restore product variant", err)
+		return false, repository.NewDatabaseQueryError("restore product variant", err)
 	}
 	if result.ModifiedCount == 0 {
 		return false, repository.NewNotFoundError("ProductVariant", id.String())

@@ -69,8 +69,8 @@ func NewAlreadyExistsError(resource, key string) *ServiceError {
 		Code:    ErrAlreadyExists,
 		Message: fmt.Sprintf("%s already exists with key %s", resource, key),
 		Details: map[string]any{
-			"resource": resource,
-			"key":      key,
+			"Resource": resource,
+			"Key":      key,
 		},
 	}
 }
@@ -80,8 +80,8 @@ func NewServiceNotFoundError(resource, id string) *ServiceError {
 		Code:    ErrNotFound,
 		Message: fmt.Sprintf("%s with ID %s not found", resource, id),
 		Details: map[string]any{
-			"resource": resource,
-			"id":       id,
+			"Resource": resource,
+			"ID":       id,
 		},
 	}
 }
@@ -105,9 +105,9 @@ func NewForbiddenError(actor, action, resource string) *ServiceError {
 		Code:    ErrForbidden,
 		Message: fmt.Sprintf("Actor %s cannot %s %s", actor, action, resource),
 		Details: map[string]any{
-			"actor":    actor,
-			"action":   action,
-			"resource": resource,
+			"Actor":    actor,
+			"Action":   action,
+			"Resource": resource,
 		},
 	}
 }
@@ -125,8 +125,8 @@ func NewServiceTimeout(operation string, timeout time.Duration) *ServiceError {
 		Code:    ErrTimeout,
 		Message: fmt.Sprintf("Service operation '%s' timed out after %v", operation, timeout),
 		Details: map[string]any{
-			"operation": operation,
-			"timeout":   timeout.String(),
+			"Operation": operation,
+			"Timeout":   timeout.String(),
 		},
 	}
 }
@@ -168,18 +168,16 @@ func ConvertRepositoryError(err error) error {
 		case repository.ErrAccessDenied,
 			repository.ErrUnauthorized,
 			repository.ErrDatabaseTimeout,
-			repository.ErrDatabaseNotFound,
 			repository.ErrDatabaseConnection:
 			return NewInternalError("database not working", err)
 		case repository.ErrConstraintViolation,
 			repository.ErrDatabaseQuery,
 			repository.ErrInvalidData:
 			return NewBadRequestError("request data is invalid", err)
-		case repository.ErrDatabaseInsert,
-			repository.ErrDatabaseUpdate,
-			repository.ErrDatabaseDelete:
-			return NewOperationBlockedError("query failed", nil)
+		case repository.ErrDataNotFound:
+			fmt.Println(repoErr.Details)
+			return NewServiceNotFoundError(repoErr.Details["resource"].(string), repoErr.Details["id"].(string))
 		}
 	}
-	return NewInternalError("unknown error occurred", err)
+	return NewInternalError("unknown error occurred", repoErr.Cause)
 }

@@ -69,7 +69,8 @@ func ErrorHandler() fiber.ErrorHandler {
 		if service.AsServiceError(e, &serviceErr) {
 			httpStatus := getHTTPStatusForServiceError(serviceErr)
 			c.Status(httpStatus)
-			return c.JSON(handler.Failure(translation.Localize(c, fmt.Sprintf("errors.%d", httpStatus)), serviceErr.Cause))
+			fmt.Println("serviceErr.Details", serviceErr.Details)
+			return c.JSON(handler.Failure(translation.Localize(c, fmt.Sprintf("errors.%d", httpStatus), serviceErr.Details), serviceErr))
 		}
 
 		maskedError := fmt.Errorf("something went wrong")

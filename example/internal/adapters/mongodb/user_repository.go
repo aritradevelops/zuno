@@ -57,7 +57,7 @@ func (r *UserRepository) Create(ctx context.Context, actor *action.Actor, payloa
 	user.UpdatedBy = actor.UID
 
 	if _, err := r.collection.InsertOne(ctx, user); err != nil {
-		return nil, repository.NewDatabaseInsertError("create user", err)
+		return nil, repository.NewDatabaseQueryError("create user", err)
 	}
 	return user.toRepository(), nil
 }
@@ -96,7 +96,7 @@ func (r *UserRepository) UpdateByID(ctx context.Context, actor *action.Actor, id
 	dataMap["updated_by"] = actor.UID
 	result, err := r.collection.UpdateOne(ctx, filter, bson.M{"$set": dataMap})
 	if err != nil {
-		return false, repository.NewDatabaseUpdateError("update user", err)
+		return false, repository.NewDatabaseQueryError("update user", err)
 	}
 	if result.ModifiedCount == 0 {
 		return false, repository.NewNotFoundError("User", id.String())
@@ -117,7 +117,7 @@ func (r *UserRepository) DeleteByID(ctx context.Context, actor *action.Actor, id
 		"deleted_by": actor.UID,
 	}})
 	if err != nil {
-		return false, repository.NewDatabaseUpdateError("delete user", err)
+		return false, repository.NewDatabaseQueryError("delete user", err)
 	}
 	if result.ModifiedCount == 0 {
 		return false, repository.NewNotFoundError("User", id.String())
@@ -133,7 +133,7 @@ func (r *UserRepository) DestroyByID(ctx context.Context, actor *action.Actor, i
 	applyFilter(filter, actor)
 	result, err := r.collection.DeleteOne(ctx, filter)
 	if err != nil {
-		return false, repository.NewDatabaseDeleteError("destroy user", err)
+		return false, repository.NewDatabaseQueryError("destroy user", err)
 	}
 	if result.DeletedCount == 0 {
 		return false, repository.NewNotFoundError("User", id.String())
@@ -153,7 +153,7 @@ func (r *UserRepository) RestoreByID(ctx context.Context, actor *action.Actor, i
 		"deleted_at": nil,
 	}})
 	if err != nil {
-		return false, repository.NewDatabaseUpdateError("restore user", err)
+		return false, repository.NewDatabaseQueryError("restore user", err)
 	}
 	if result.ModifiedCount == 0 {
 		return false, repository.NewNotFoundError("User", id.String())
