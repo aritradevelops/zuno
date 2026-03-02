@@ -8,6 +8,7 @@ import (
 	"github.com/aritradevelops/zuno/cmd/config"
 	"github.com/aritradevelops/zuno/cmd/generators/barebone"
 	"github.com/aritradevelops/zuno/cmd/generators/bun"
+	"github.com/aritradevelops/zuno/cmd/generators/docker"
 	"github.com/aritradevelops/zuno/cmd/generators/fiber"
 	"github.com/aritradevelops/zuno/cmd/generators/goose"
 	"github.com/aritradevelops/zuno/cmd/generators/mongodb"
@@ -25,6 +26,7 @@ var (
 	httpProvider      string
 	grpcProvider      string
 	wsProvider        string
+	dockerEnabled     bool
 )
 
 var directCloneDirs = []string{"locales"}
@@ -51,8 +53,8 @@ var initCmd = &cobra.Command{
 				huh.NewSelect[string]().
 					Title("Choose database adapter").
 					Options(
-						huh.NewOption("mongodb", "mongodb"),
 						huh.NewOption("bun", "bun"),
+						huh.NewOption("mongodb", "mongodb"),
 					).
 					Value(&databaseAdapter),
 			)
@@ -64,35 +66,45 @@ var initCmd = &cobra.Command{
 					Title("Select HTTP provider").
 					Options(
 						huh.NewOption("fiber", "fiber"),
-						huh.NewOption("gin", "gin"),
 						huh.NewOption("none", "none"),
 					).
 					Value(&httpProvider),
 			)
 		}
-		if !cmd.Flags().Changed("grpc-provider") {
+		if !cmd.Flags().Changed("docker") {
 			fields = append(fields,
-				huh.NewSelect[string]().
-					Title("Select gRPC provider").
-					Options(
-						huh.NewOption("grpc", "grpc"),
-						huh.NewOption("gin", "gin"),
-						huh.NewOption("none", "none"),
-					).
-					Value(&grpcProvider),
+				huh.NewConfirm().
+					Title("Use Docker").
+					Value(&dockerEnabled),
 			)
 		}
-		if !cmd.Flags().Changed("ws-provider") {
-			fields = append(fields,
-				huh.NewSelect[string]().
-					Title("Select WebSocket provider").
-					Options(
-						huh.NewOption("gorilla", "gorilla"),
-						huh.NewOption("none", "none"),
-					).
-					Value(&wsProvider),
-			)
-		}
+		// TODO: uncomment after implementation
+		grpcProvider = "none"
+		// if !cmd.Flags().Changed("grpc-provider") {
+		// 	fields = append(fields,
+		// 		huh.NewSelect[string]().
+		// 			Title("Select gRPC provider").
+		// 			Options(
+		// 				huh.NewOption("grpc", "grpc"),
+		// 				huh.NewOption("gin", "gin"),
+		// 				huh.NewOption("none", "none"),
+		// 			).
+		// 			Value(&grpcProvider),
+		// 	)
+		// }
+		// TODO: uncomment after implementation
+		wsProvider = "none"
+		// if !cmd.Flags().Changed("ws-provider") {
+		// 	fields = append(fields,
+		// 		huh.NewSelect[string]().
+		// 			Title("Select WebSocket provider").
+		// 			Options(
+		// 				huh.NewOption("gorilla", "gorilla"),
+		// 				huh.NewOption("none", "none"),
+		// 			).
+		// 			Value(&wsProvider),
+		// 	)
+		// }
 
 		// Run form only if something needs prompting
 		if len(fields) > 0 {
@@ -104,7 +116,6 @@ var initCmd = &cobra.Command{
 		}
 
 		if !cmd.Flags().Changed("migration-provider") && databaseAdapter != "mongodb" {
-			migrationProvider = "none"
 			if err := huh.NewForm(huh.NewGroup(
 				huh.NewSelect[string]().
 					Title("Select migration provider").
@@ -116,6 +127,8 @@ var initCmd = &cobra.Command{
 			)).Run(); err != nil {
 				return err
 			}
+		} else {
+			migrationProvider = "none"
 		}
 
 		config := &config.Config{
@@ -145,8 +158,12 @@ var initCmd = &cobra.Command{
 					Provider: wsProvider,
 				},
 			},
+			Docker: config.Docker{
+				Enabled: dockerEnabled,
+			},
 		}
 		defer func() {
+			// TODO: show docker and verbose
 			logger.Info(fmt.Sprintf(`
 Re-run with : zuno init --package=%s \
 --database-adapter=%s \
@@ -205,6 +222,13 @@ func initializeNewProject(config *config.Config, verbose bool) error {
 		if config.Adapter.Database.Migration.Enabled {
 			logger.Info("Initializing migration...")
 			if err := goose.Initialize(config, verbose); err != nil {
+				return err
+			}
+		}
+
+		if config.Docker.Enabled {
+			logger.Info("Initializing docker files...")
+			if err := docker.Initialize(config, verbose); err != nil {
 				return err
 			}
 		}
@@ -272,5 +296,12 @@ func init() {
 		"migration-provider",
 		"",
 		"Migration provider (goose)",
+	)
+
+	initCmd.Flags().BoolVar(
+		&dockerEnabled,
+		"docker",
+		true,
+		"Use docker",
 	)
 }
