@@ -7,8 +7,9 @@ import (
 	"go/token"
 	"os"
 	"path"
-	"zuno/cmd/data"
-	"zuno/cmd/utils"
+
+	"github.com/aritradevelops/zuno/cmd/data"
+	"github.com/aritradevelops/zuno/cmd/utils"
 
 	"github.com/ettle/strcase"
 )

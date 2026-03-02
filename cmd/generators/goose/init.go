@@ -2,8 +2,9 @@ package goose
 
 import (
 	"os"
-	"zuno/cmd/config"
-	"zuno/cmd/utils"
+
+	"github.com/aritradevelops/zuno/cmd/config"
+	"github.com/aritradevelops/zuno/cmd/utils"
 )
 
 func Initialize(config *config.Config, verbose bool) error {

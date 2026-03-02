@@ -1,8 +1,8 @@
 package fiber
 
 import (
-	"zuno/cmd/config"
-	"zuno/cmd/utils"
+	"github.com/aritradevelops/zuno/cmd/config"
+	"github.com/aritradevelops/zuno/cmd/utils"
 )
 
 func Initialize(cfg *config.Config, verbose bool) error {

@@ -3,7 +3,8 @@ package bun
 import (
 	"path"
 	"strings"
-	"zuno/cmd/utils"
+
+	"github.com/aritradevelops/zuno/cmd/utils"
 
 	"github.com/ettle/strcase"
 	"github.com/gertd/go-pluralize"

@@ -1,6 +1,0 @@
-# TODO
-- init command
-- remove parts command
-- add fields command
-- documentation
-- setup docker for postgres

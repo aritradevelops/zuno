@@ -4,8 +4,8 @@ Copyright © 2026 NAME HERE <EMAIL ADDRESS>
 package cmd
 
 import (
-	"zuno/cmd/generators/goose"
-	"zuno/pkg/logger"
+	"github.com/aritradevelops/zuno/cmd/generators/goose"
+	"github.com/aritradevelops/zuno/pkg/logger"
 
 	"github.com/spf13/cobra"
 )

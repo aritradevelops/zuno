@@ -8,7 +8,8 @@ import (
 	"go/token"
 	"os"
 	"path"
-	"zuno/cmd/utils"
+
+	"github.com/aritradevelops/zuno/cmd/utils"
 
 	"github.com/ettle/strcase"
 	"github.com/gertd/go-pluralize"

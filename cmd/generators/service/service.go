@@ -9,8 +9,9 @@ import (
 	"os"
 	"path"
 	"strings"
-	"zuno/cmd/data"
-	"zuno/cmd/utils"
+
+	"github.com/aritradevelops/zuno/cmd/data"
+	"github.com/aritradevelops/zuno/cmd/utils"
 
 	"github.com/ettle/strcase"
 	"github.com/gertd/go-pluralize"

@@ -2,8 +2,9 @@ package barebone
 
 import (
 	"embed"
-	"zuno/cmd/config"
-	"zuno/cmd/utils"
+
+	"github.com/aritradevelops/zuno/cmd/config"
+	"github.com/aritradevelops/zuno/cmd/utils"
 )
 
 //go:embed all:*

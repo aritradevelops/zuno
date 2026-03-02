@@ -4,7 +4,8 @@ import (
 	"embed"
 	"os"
 	"testing"
-	"zuno/cmd/utils"
+
+	"github.com/aritradevelops/zuno/cmd/utils"
 
 	"github.com/stretchr/testify/assert"
 )

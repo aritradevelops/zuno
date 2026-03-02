@@ -1,10 +1,10 @@
 package add
 
 import (
-	"zuno/cmd/app"
-	"zuno/cmd/config"
-	"zuno/cmd/generators/fiber"
-	"zuno/pkg/logger"
+	"github.com/aritradevelops/zuno/cmd/app"
+	"github.com/aritradevelops/zuno/cmd/config"
+	"github.com/aritradevelops/zuno/cmd/generators/fiber"
+	"github.com/aritradevelops/zuno/pkg/logger"
 
 	"github.com/spf13/cobra"
 )

@@ -3,14 +3,15 @@ package add
 import (
 	"fmt"
 	"strings"
-	"zuno/cmd/app"
-	"zuno/cmd/config"
-	"zuno/cmd/data"
-	"zuno/cmd/generators/fiber"
-	"zuno/cmd/generators/mongodb"
-	"zuno/cmd/generators/repository"
-	"zuno/cmd/generators/service"
-	"zuno/pkg/logger"
+
+	"github.com/aritradevelops/zuno/cmd/app"
+	"github.com/aritradevelops/zuno/cmd/config"
+	"github.com/aritradevelops/zuno/cmd/data"
+	"github.com/aritradevelops/zuno/cmd/generators/fiber"
+	"github.com/aritradevelops/zuno/cmd/generators/mongodb"
+	"github.com/aritradevelops/zuno/cmd/generators/repository"
+	"github.com/aritradevelops/zuno/cmd/generators/service"
+	"github.com/aritradevelops/zuno/pkg/logger"
 
 	"github.com/charmbracelet/huh"
 	"github.com/spf13/cobra"

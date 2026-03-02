@@ -1,8 +1,8 @@
 package cmd
 
 import (
-	"zuno/cmd/subcommands/add"
-	initP "zuno/cmd/subcommands/init"
+	"github.com/aritradevelops/zuno/cmd/subcommands/add"
+	initP "github.com/aritradevelops/zuno/cmd/subcommands/init"
 
 	"github.com/spf13/cobra"
 )
@@ -12,7 +12,7 @@ var (
 )
 
 var rootCmd = &cobra.Command{
-	Use: "zuno",
+	Use: "github.com/aritradevelops/zuno",
 }
 
 func init() {

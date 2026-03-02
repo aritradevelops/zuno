@@ -1,4 +1,4 @@
-module zuno
+module github.com/aritradevelops/zuno
 
 go 1.25.5
 
