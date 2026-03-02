@@ -17,6 +17,7 @@ type Config struct {
 	PackageBase string    `koanf:"package_base"`
 	Adapter     Adapter   `koanf:"adapter"`
 	Transport   Transport `koanf:"transport"`
+	Docker      Docker    `koanf:"docker"`
 }
 
 type Transport struct {
@@ -53,6 +54,10 @@ type DatabaseAdapter struct {
 type MigrationConfig struct {
 	Enabled  bool   `koanf:"enabled"`
 	Provider string `koanf:"provider"`
+}
+
+type Docker struct {
+	Enabled bool `koanf:"enabled"`
 }
 
 func (c *Config) ToYaml() ([]byte, error) {

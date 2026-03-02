@@ -16,3 +16,5 @@ adapters:
     migration:
       enabled: true
       provider: "goose"
+docker:
+  enabled: true
