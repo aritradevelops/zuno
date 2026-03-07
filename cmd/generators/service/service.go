@@ -44,6 +44,7 @@ type AddFieldsToServiceData struct {
 	RepositoryFunction string // fromRepositoryProductVariant
 	Variable           string // productVariant
 	FileName           string // product_variant_service.go
+	Fields             []data.Field
 }
 
 // AddNewService adds a new service
@@ -177,7 +178,7 @@ func RegisterNewService(module string) error {
 
 // AddFieldsToService adds fields to the service
 func AddFieldsToService(module string, fields []data.Field) error {
-	data, err := prepareAddFieldsToServiceData(module)
+	data, err := prepareAddFieldsToServiceData(module, fields)
 	if err != nil {
 		return err
 	}
@@ -205,10 +206,10 @@ func AddFieldsToService(module string, fields []data.Field) error {
 		if ok && ts.Name.Name == data.FieldsType {
 			st, ok := ts.Type.(*ast.StructType)
 			if ok {
-				for _, field := range fields {
+				for _, field := range data.Fields {
 					st.Fields.List = append(st.Fields.List, &ast.Field{
 						Names: []*ast.Ident{ast.NewIdent(field.Name)},
-						Type:  ast.NewIdent(field.Type),
+						Type:  ast.NewIdent(field.GoType()),
 						Tag: &ast.BasicLit{
 							Kind:  token.STRING,
 							Value: field.ServiceTags(),
@@ -293,13 +294,14 @@ func prepareRegisterNewServiceData(module string) (RegisterNewServiceData, error
 	}, nil
 }
 
-func prepareAddFieldsToServiceData(module string) (AddFieldsToServiceData, error) {
+func prepareAddFieldsToServiceData(module string, fields []data.Field) (AddFieldsToServiceData, error) {
 	data := AddFieldsToServiceData{
 		Module:             module,
 		FieldsType:         module + "Fields",
 		RepositoryFunction: "fromRepository" + module,
 		Variable:           strcase.ToCamel(module),
 		FileName:           strcase.ToSnake(module) + "_service.go",
+		Fields:             fields,
 	}
 	return data, nil
 }

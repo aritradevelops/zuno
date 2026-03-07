@@ -32,6 +32,7 @@ type AddFieldsToRepositoryData struct {
 	Module     string // Domain module name, PascalCase (e.g. "ProductVariant")
 	FieldsType string // Payload / fields struct (e.g. "ProductVariantFields")
 	FileName   string // product_variant_repository.go
+	Fields     []data.Field
 }
 
 // AddNewRepository adds a new repository
@@ -113,7 +114,7 @@ func RegisterNewRepository(module string) error {
 
 // AddFieldsToRepository adds fields to the repository
 func AddFieldsToRepository(module string, fields []data.Field) error {
-	data, err := prepareAddFieldsToRepositoryData(module)
+	data, err := prepareAddFieldsToRepositoryData(module, fields)
 	if err != nil {
 		return err
 	}
@@ -141,10 +142,10 @@ func AddFieldsToRepository(module string, fields []data.Field) error {
 		if ok && ts.Name.Name == data.FieldsType {
 			st, ok := ts.Type.(*ast.StructType)
 			if ok {
-				for _, field := range fields {
+				for _, field := range data.Fields {
 					st.Fields.List = append(st.Fields.List, &ast.Field{
 						Names: []*ast.Ident{ast.NewIdent(field.Name)},
-						Type:  ast.NewIdent(field.Type),
+						Type:  ast.NewIdent(field.GoType()),
 					})
 				}
 			}
@@ -187,11 +188,12 @@ func prepareRegisterNewRepositoryData(module string) (RegisterNewRepositoryData,
 	}, nil
 }
 
-func prepareAddFieldsToRepositoryData(module string) (AddFieldsToRepositoryData, error) {
+func prepareAddFieldsToRepositoryData(module string, fields []data.Field) (AddFieldsToRepositoryData, error) {
 	data := AddFieldsToRepositoryData{
 		Module:     module,
 		FieldsType: module + "Fields",
 		FileName:   strcase.ToSnake(module) + "_repository.go",
+		Fields:     fields,
 	}
 	return data, nil
 }

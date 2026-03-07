@@ -1,0 +1,13 @@
+-- +goose Up
+-- +goose StatementBegin
+{{range .Fields}}
+ALTER TABLE {{$.Table}} ADD COLUMN {{.ColumnName}} {{.SqlType}} {{if .IsArray }} ARRAY {{end}} {{if .SqlInfo.Nullable}}NULL{{else}}NOT NULL{{end}} {{if .SqlInfo.Default}}DEFAULT {{.SqlInfo.Default}}{{end}} {{if .SqlInfo.Unique}}UNIQUE{{end}};
+{{end}}
+-- +goose StatementEnd
+
+-- +goose Down
+-- +goose StatementBegin
+{{range .Fields}}
+ALTER TABLE {{$.Table}} DROP COLUMN {{.ColumnName}};
+{{end}}
+-- +goose StatementEnd

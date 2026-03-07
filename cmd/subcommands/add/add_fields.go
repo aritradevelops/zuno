@@ -8,7 +8,6 @@ import (
 	"github.com/aritradevelops/zuno/cmd/config"
 	"github.com/aritradevelops/zuno/cmd/data"
 	"github.com/aritradevelops/zuno/cmd/generators/fiber"
-	"github.com/aritradevelops/zuno/cmd/generators/mongodb"
 	"github.com/aritradevelops/zuno/cmd/generators/repository"
 	"github.com/aritradevelops/zuno/cmd/generators/service"
 	"github.com/aritradevelops/zuno/pkg/logger"
@@ -20,10 +19,14 @@ import (
 var fieldTypes = []string{
 	"string",
 	"int",
-	"float64",
 	"bool",
-	"bson.ObjectID",
-	"*bson.ObjectID",
+	"time.Time",
+	"float32",
+	"float64",
+	"int8",
+	"int16",
+	"int32",
+	"int64",
 }
 
 var addFieldsCmd = &cobra.Command{
@@ -48,20 +51,43 @@ var addFieldsCmd = &cobra.Command{
 
 			preview := formatFieldsPreview(fields)
 
-			if err := huh.NewForm(
-				huh.NewGroup(
-					huh.NewNote().
-						Title("Current Session Fields").
-						Description(preview),
+			formFields := []huh.Field{
+				huh.NewNote().
+					Title("Current Session Fields").
+					Description(preview),
 
+				huh.NewInput().
+					Title("data.Field name").
+					Value(&field.Name),
+				huh.NewSelect[string]().
+					Title("data.Field type").
+					Options(options...).
+					Value(&field.RawType),
+				huh.NewConfirm().
+					Title("Is it an array/slice?").
+					Value(&field.IsArray),
+				huh.NewConfirm().
+					Title("Is it a pointer?").
+					Value(&field.IsPointer),
+			}
+
+			if config.Adapter.Database.Provider == "bun" {
+				field.SqlInfo = &data.SqlInfo{}
+				formFields = append(formFields,
+					huh.NewConfirm().
+						Title("Is it Nullable?").
+						Value(&field.SqlInfo.Nullable),
+					huh.NewConfirm().
+						Title("Is it Unique?").
+						Value(&field.SqlInfo.Unique),
 					huh.NewInput().
-						Title("data.Field name").
-						Value(&field.Name),
-					huh.NewSelect[string]().
-						Title("data.Field type").
-						Options(options...).
-						Value(&field.Type),
-				),
+						Title("Default value (leave empty for none)").
+						Value(&field.SqlInfo.Default),
+				)
+			}
+
+			if err := huh.NewForm(
+				huh.NewGroup(formFields...),
 			).Run(); err != nil {
 				return
 			}
@@ -76,7 +102,11 @@ var addFieldsCmd = &cobra.Command{
 			}
 		}
 
-		addFields(config, args[0], fields, cmd)
+		err := addFields(config, args[0], fields)
+		if err != nil {
+			logger.Error("Failed to add fields", "err", err)
+			return
+		}
 		logger.Info("Fields added successfully")
 	},
 }
@@ -90,36 +120,36 @@ func formatFieldsPreview(fields []data.Field) string {
 	b.WriteString("Fields to be added:\n\n")
 
 	for i, f := range fields {
-		b.WriteString(fmt.Sprintf("%d. %s (%s)\n", i+1, f.Name, f.Type))
+		fmt.Fprintf(&b, "%d. %s (%s)\n", i+1, f.Name, f.GoType())
 	}
 
 	return b.String()
 }
-func addFields(config *config.Config, module string, fields []data.Field, cmd *cobra.Command) {
+func addFields(config *config.Config, module string, fields []data.Field) error {
 	err := repository.AddFieldsToRepository(module, fields)
 	if err != nil {
 		logger.Error("Error adding fields:", "err", err)
-		return
+		return err
 	}
 
 	err = service.AddFieldsToService(module, fields)
 	if err != nil {
 		logger.Error("Error adding fields:", "err", err)
-		return
+		return err
 	}
 
-	err = mongodb.AddFieldsToModel(module, fields)
+	err = addFieldsToAdapters(config, module, fields)
 	if err != nil {
 		logger.Error("Error adding fields:", "err", err)
-		return
+		return err
 	}
 
 	err = fiber.AddFieldsToHandler(module, fields)
 	if err != nil {
 		logger.Error("Error adding fields:", "err", err)
-		return
+		return err
 	}
-
+	return nil
 }
 
 func init() {

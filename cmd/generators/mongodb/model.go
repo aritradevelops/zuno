@@ -68,13 +68,13 @@ func AddFieldsToModel(module string, fields []data.Field) error {
 		if ok && ts.Name.Name == data.FieldsType {
 			st, ok := ts.Type.(*ast.StructType)
 			if ok {
-				for _, field := range fields {
+				for _, field := range data.Fields {
 					st.Fields.List = append(st.Fields.List, &ast.Field{
 						Names: []*ast.Ident{ast.NewIdent(field.Name)},
-						Type:  ast.NewIdent(field.Type),
+						Type:  ast.NewIdent(field.GoType()),
 						Tag: &ast.BasicLit{
 							Kind:  token.STRING,
-							Value: field.ModelTags(),
+							Value: field.BsonTags(),
 						},
 					})
 				}

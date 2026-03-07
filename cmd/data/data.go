@@ -8,20 +8,89 @@ import (
 )
 
 type Field struct {
-	Name string
-	Type string
+	Name      string
+	RawType   string
+	IsArray   bool
+	IsPointer bool
+	SqlInfo   *SqlInfo
+}
+
+type SqlInfo struct {
+	Unique   bool
+	Nullable bool
+	Default  string
 }
 
 func (f Field) HandlerTags() string {
 	return fmt.Sprintf("`json:\"%s\" example:\"%s\"`", strcase.ToSnake(f.Name), f.GetIntuitiveExample())
 }
 
-func (f Field) ModelTags() string {
+func (f Field) BsonTags() string {
 	return fmt.Sprintf("`bson:\"%s\"`", strcase.ToSnake(f.Name))
 }
 
+func (f Field) DbName() string {
+	return strcase.ToSnake(f.Name)
+}
+
+func (f Field) GoType() string {
+	goType := f.RawType
+	if f.IsArray {
+		goType = "[]" + goType
+	}
+	if f.IsPointer {
+		goType = "*" + goType
+	}
+	return goType
+}
+
+func (f Field) ColumnName() string {
+	return strcase.ToSnake(f.Name)
+}
+
+func (f Field) SqlType() string {
+	switch f.RawType {
+	case "string":
+		return "VARCHAR"
+	case "int", "int32":
+		return "INTEGER"
+	case "int8", "int16":
+		return "SMALLINT"
+	case "int64":
+		return "BIGINT"
+	case "bool":
+		return "BOOLEAN"
+	case "time.Time":
+		return "TIMESTAMP WITH TIME ZONE"
+	case "float32":
+		return "REAL"
+	case "float64":
+		return "DOUBLE PRECISION"
+	default:
+		return "TEXT"
+	}
+}
+
+func (f Field) BunTags() string {
+	additional := ""
+	if f.SqlInfo.Unique {
+		additional += ",unique"
+	}
+	if f.SqlInfo.Nullable {
+		additional += ",nullzero"
+	}
+	if f.SqlInfo.Default != "" {
+		additional += ",default:" + f.SqlInfo.Default
+	}
+	if f.IsArray {
+		additional += ",array"
+	}
+
+	return fmt.Sprintf("`bun:\"%s,type:%s%s\"`", strcase.ToSnake(f.Name), strings.ToLower(f.SqlType()), additional)
+}
+
 func (f Field) GetIntuitiveExample() string {
-	switch f.Type {
+	switch f.RawType {
 	case "string":
 		if f.Name == "email" {
 			return "someone@example.com"

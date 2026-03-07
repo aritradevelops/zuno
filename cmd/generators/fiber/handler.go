@@ -12,6 +12,7 @@ import (
 
 	"github.com/aritradevelops/zuno/cmd/data"
 	"github.com/aritradevelops/zuno/cmd/utils"
+	"github.com/aritradevelops/zuno/pkg/logger"
 
 	"github.com/ettle/strcase"
 	"github.com/gertd/go-pluralize"
@@ -46,6 +47,7 @@ type AddFieldsToHandlerData struct {
 	ServiceFunction string // fromProductVariant
 	Variable        string // productVariant
 	FileName        string // product_variant_handler.go
+	Fields          []data.Field
 }
 
 // AddNewHandler adds default handlers for a new module
@@ -184,7 +186,7 @@ func RegisterNewHandler(module string) error {
 
 // AddFieldsToHandler adds fields to the handler
 func AddFieldsToHandler(module string, fields []data.Field) error {
-	data, err := prepareAddFieldsToHandlerData(module)
+	data, err := prepareAddFieldsToHandlerData(module, fields)
 	if err != nil {
 		return err
 	}
@@ -206,16 +208,19 @@ func AddFieldsToHandler(module string, fields []data.Field) error {
 		return err
 	}
 	ast.Inspect(f, func(n ast.Node) bool {
-
+		logger.Info("lookin for struct", "name", data.FieldsType)
 		// 1️⃣ Find Fields struct
 		ts, ok := n.(*ast.TypeSpec)
 		if ok && ts.Name.Name == data.FieldsType {
+			logger.Info("found fields key")
 			st, ok := ts.Type.(*ast.StructType)
 			if ok {
-				for _, field := range fields {
+				logger.Info("it is a struct")
+				for _, field := range data.Fields {
+					logger.Info("adding field", "field", field)
 					st.Fields.List = append(st.Fields.List, &ast.Field{
 						Names: []*ast.Ident{ast.NewIdent(field.Name)},
-						Type:  ast.NewIdent(field.Type),
+						Type:  ast.NewIdent(field.GoType()),
 						Tag: &ast.BasicLit{
 							Kind:  token.STRING,
 							Value: field.HandlerTags(),
@@ -305,13 +310,14 @@ func prepareRegisterNewHandlerData(module string) (RegisterNewHandlerData, error
 	return data, nil
 }
 
-func prepareAddFieldsToHandlerData(module string) (AddFieldsToHandlerData, error) {
+func prepareAddFieldsToHandlerData(module string, fields []data.Field) (AddFieldsToHandlerData, error) {
 	data := AddFieldsToHandlerData{
 		Module:          module,
 		FieldsType:      module + "Fields",
 		ServiceFunction: "fromService" + module,
 		Variable:        strcase.ToCamel(module),
 		FileName:        strcase.ToSnake(module) + "_handler.go",
+		Fields:          fields,
 	}
 	return data, nil
 }
