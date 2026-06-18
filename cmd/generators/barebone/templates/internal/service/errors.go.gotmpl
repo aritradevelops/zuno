@@ -58,7 +58,7 @@ func NewValidationError(message string, cause error) *ServiceError {
 }
 func NewBadRequestError(message string, cause error) *ServiceError {
 	return &ServiceError{
-		Code:    ErrValidationFailed,
+		Code:    ErrBadRequest,
 		Message: message,
 		Cause:   cause,
 	}
@@ -163,21 +163,50 @@ func IsForbidden(err error) bool {
 
 func ConvertRepositoryError(err error) error {
 	var repoErr *repository.RepositoryError
-	if errors.As(err, &repoErr) {
-		switch repoErr.Code {
-		case repository.ErrAccessDenied,
-			repository.ErrUnauthorized,
-			repository.ErrDatabaseTimeout,
-			repository.ErrDatabaseConnection:
-			return NewInternalError("database not working", err)
-		case repository.ErrConstraintViolation,
-			repository.ErrDatabaseQuery,
-			repository.ErrInvalidData:
-			return NewBadRequestError("request data is invalid", err)
-		case repository.ErrDataNotFound:
-			fmt.Println(repoErr.Details)
-			return NewServiceNotFoundError(repoErr.Details["resource"].(string), repoErr.Details["id"].(string))
-		}
+
+	if !errors.As(err, &repoErr) {
+		return NewInternalError("unknown error occurred", err)
 	}
-	return NewInternalError("unknown error occurred", repoErr.Cause)
+
+	switch repoErr.Code {
+
+	case repository.ErrDataNotFound:
+		resource, _ := repoErr.Details["resource"].(string)
+		id, _ := repoErr.Details["id"].(string)
+
+		return NewServiceNotFoundError(resource, id)
+
+	case repository.ErrDuplicateEntry:
+		resource, _ := repoErr.Details["resource"].(string)
+		field, _ := repoErr.Details["field"].(string)
+
+		return NewAlreadyExistsError(resource, field)
+
+	case repository.ErrInvalidData,
+		repository.ErrConstraintViolation:
+		return NewBadRequestError(
+			"request data is invalid",
+			err,
+		)
+
+	case repository.ErrDatabaseConnection,
+		repository.ErrDatabaseTimeout,
+		repository.ErrDatabaseQuery,
+		repository.ErrDatabaseInsert,
+		repository.ErrDatabaseUpdate,
+		repository.ErrDatabaseDelete,
+		repository.ErrAccessDenied,
+		repository.ErrUnauthorized:
+		return NewInternalError(
+			"internal service error",
+			err,
+		)
+
+	default:
+		return NewInternalError(
+			"internal service error",
+			err,
+		)
+	}
 }
+

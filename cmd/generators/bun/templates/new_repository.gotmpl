@@ -21,8 +21,8 @@ func New{{.RepositoryType}}(db *bun.DB) repository.{{.RepositoryType}} {
 }
 
 // List implements [repository.{{.RepositoryType}}].
-func (u *{{.RepositoryType}}) List(ctx context.Context, actor *action.Actor, opts *pagination.Options) (*pagination.Result[*repository.User], error) {
-	{{.VariablePlural}}, info, err := paginate[*User](ctx, u.db, actor, opts, {{.Module}}SearchFields)
+func (u *{{.RepositoryType}}) List(ctx context.Context, actor *action.Actor, opts *pagination.Options) (*pagination.Result[*repository.{{.Module}}], error) {
+	{{.VariablePlural}}, info, err := paginate[*{{.Module}}](ctx, u.db, actor, opts, {{.Module}}SearchFields)
 	if err != nil {
 		return nil, repository.NewDatabaseQueryError("list users", err)
 	}
@@ -41,7 +41,7 @@ func (u *{{.RepositoryType}}) Create(ctx context.Context, actor *action.Actor, p
 	fields := ({{.FieldsType}})(payload)
 	{{.Variable}} := &{{.Module}}{
 		UID:        uuid.New(),
-		UserFields: fields,
+		{{.FieldsType}}: fields,
 		CreatedAt:  time.Now(),
 		CreatedBy:  actor.UID,
 		UpdatedAt:  time.Now(),
