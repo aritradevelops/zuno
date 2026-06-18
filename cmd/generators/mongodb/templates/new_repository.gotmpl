@@ -57,7 +57,7 @@ func (r *{{.RepositoryType}}) Create(ctx context.Context, actor *action.Actor, p
 	{{.Variable}}.UpdatedBy = actor.UID
 
 	if _, err := r.collection.InsertOne(ctx, {{.Variable}}); err != nil {
-		return nil, repository.NewDatabaseInsertError("create {{.Readable}}", err)
+		return nil, repository.ErrDatabaseQuery("create {{.Readable}}", err)
 	}
 	return {{.Variable}}.toRepository(), nil
 }
@@ -96,7 +96,7 @@ func (r *{{.RepositoryType}}) UpdateByID(ctx context.Context, actor *action.Acto
 	dataMap["updated_by"] = actor.UID
 	result, err := r.collection.UpdateOne(ctx, filter, bson.M{"$set": dataMap})
 	if err != nil {
-		return false, repository.NewDatabaseUpdateError("update {{.Readable}}", err)
+		return false, repository.ErrDatabaseQuery("update {{.Readable}}", err)
 	}
 	if result.ModifiedCount == 0 {
 		return false, repository.NewNotFoundError("{{.Module}}", id.String())
@@ -117,7 +117,7 @@ func (r *{{.RepositoryType}}) DeleteByID(ctx context.Context, actor *action.Acto
 		"deleted_by": actor.UID,
 	}})
 	if err != nil {
-		return false, repository.NewDatabaseUpdateError("delete {{.Readable}}", err)
+		return false, repository.ErrDatabaseQuery("delete {{.Readable}}", err)
 	}
 	if result.ModifiedCount == 0 {
 		return false, repository.NewNotFoundError("{{.Module}}", id.String())
@@ -133,7 +133,7 @@ func (r *{{.RepositoryType}}) DestroyByID(ctx context.Context, actor *action.Act
 	applyFilter(filter, actor)
 	result, err := r.collection.DeleteOne(ctx, filter)
 	if err != nil {
-		return false, repository.NewDatabaseDeleteError("destroy {{.Readable}}", err)
+		return false, repository.ErrDatabaseQuery("destroy {{.Readable}}", err)
 	}
 	if result.DeletedCount == 0 {
 		return false, repository.NewNotFoundError("{{.Module}}", id.String())
@@ -153,7 +153,7 @@ func (r *{{.RepositoryType}}) RestoreByID(ctx context.Context, actor *action.Act
 		"deleted_at": nil,
 	}})
 	if err != nil {
-		return false, repository.NewDatabaseUpdateError("restore {{.Readable}}", err)
+		return false, repository.ErrDatabaseQuery("restore {{.Readable}}", err)
 	}
 	if result.ModifiedCount == 0 {
 		return false, repository.NewNotFoundError("{{.Module}}", id.String())

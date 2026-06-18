@@ -192,9 +192,6 @@ func ConvertRepositoryError(err error) error {
 	case repository.ErrDatabaseConnection,
 		repository.ErrDatabaseTimeout,
 		repository.ErrDatabaseQuery,
-		repository.ErrDatabaseInsert,
-		repository.ErrDatabaseUpdate,
-		repository.ErrDatabaseDelete,
 		repository.ErrAccessDenied,
 		repository.ErrUnauthorized:
 		return NewInternalError(
