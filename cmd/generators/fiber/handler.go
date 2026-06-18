@@ -208,7 +208,6 @@ func AddFieldsToHandler(module string, fields []data.Field) error {
 		return err
 	}
 	ast.Inspect(f, func(n ast.Node) bool {
-		logger.Info("lookin for struct", "name", data.FieldsType)
 		// 1️⃣ Find Fields struct
 		ts, ok := n.(*ast.TypeSpec)
 		if ok && ts.Name.Name == data.FieldsType {
