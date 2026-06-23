@@ -3,6 +3,7 @@ package handler
 import (
 	"{{.Package}}/internal/pagination"
 	"{{.Package}}/internal/service"
+	"{{.Package}}/internal/domain"
 	"{{.Package}}/internal/transports/http/middlewares"
 	"{{.Package}}/pkg/logger"
 	"time"
@@ -59,18 +60,22 @@ func (h *{{.HandlerType}}) List(c fiber.Ctx) error {
 	if err := c.Bind().Query(opts); err != nil {
 		return err
 	}
+	filters := &domain.{{.Module}}Filters{}
+	if err := c.Bind().Query(filters); err != nil {
+		return err
+	}
 	actor, err := middlewares.GetActor(c)
 	if err != nil {
 		logger.Error().Err(err).Msg("can't get actor")
 		return fiber.ErrUnauthorized
 	}
-	result, err := h.{{.ServiceVariable}}.List(c.Context(), actor, (*pagination.Options)(opts))
+	result, err := h.{{.ServiceVariable}}.List(c.Context(), actor, (*pagination.Options)(opts), filters)
 	if err != nil {
 		return err
 	}
 	{{.VariablePlural}} := make([]*{{.Module}}, len(result.Data))
 	for idx, {{.Variable}} := range result.Data {
-		{{.VariablePlural}}[idx] = fromService{{.Module}}({{.Variable}})
+		{{.VariablePlural}}[idx] = fromDomain{{.Module}}({{.Variable}})
 	}
 	response := PaginatedResponse[*{{.Module}}]{
 		Data: {{.VariablePlural}},
@@ -102,12 +107,12 @@ func (h *{{.HandlerType}}) Create(c fiber.Ctx) error {
 	if err != nil {
 		return fiber.ErrUnauthorized
 	}
-	{{.Variable}}, err := h.{{.ServiceVariable}}.Create(c.Context(), actor, service.{{.FieldsType}}(payload))
+	{{.Variable}}, err := h.{{.ServiceVariable}}.Create(c.Context(), actor, domain.{{.FieldsType}}(payload))
 	if err != nil {
 		return err
 	}
 	c.Status(fiber.StatusCreated)
-	return c.JSON(Success(translation.Localize(c, "controller.create", {{.HandlerType}}Info), fromService{{.Module}}({{.Variable}})))
+	return c.JSON(Success(translation.Localize(c, "controller.create", {{.HandlerType}}Info), fromDomain{{.Module}}({{.Variable}})))
 }
 
 // Update godoc
@@ -138,7 +143,7 @@ func (h *{{.HandlerType}}) Update(c fiber.Ctx) error {
 	if err != nil {
 		return fiber.ErrUnauthorized
 	}
-	ok, err := h.{{.ServiceVariable}}.Update(c.Context(), actor, uid, service.{{.FieldsType}}(payload))
+	ok, err := h.{{.ServiceVariable}}.Update(c.Context(), actor, uid, domain.{{.FieldsType}}(payload))
 	if err != nil {
 		return err
 	}
@@ -170,7 +175,7 @@ func (h *{{.HandlerType}}) View(c fiber.Ctx) error {
 	if err != nil {
 		return err
 	}
-	return c.JSON(Success(translation.Localize(c, "controller.view", {{.HandlerType}}Info), fromService{{.Module}}({{.Variable}})))
+	return c.JSON(Success(translation.Localize(c, "controller.view", {{.HandlerType}}Info), fromDomain{{.Module}}({{.Variable}})))
 }
 
 // Delete godoc
@@ -257,7 +262,7 @@ func (h *{{.HandlerType}}) Restore(c fiber.Ctx) error {
 	return c.JSON(Success(translation.Localize(c, "controller.restore", {{.HandlerType}}Info), ok))
 }
 
-func fromService{{.Module}}({{.Variable}} *service.{{.Module}}) *{{.Module}} {
+func fromDomain{{.Module}}({{.Variable}} *domain.{{.Module}}) *{{.Module}} {
 	return &{{.Module}}{
 		UID: {{.Variable}}.UID,
 		{{.FieldsType}}: {{.FieldsType}}{

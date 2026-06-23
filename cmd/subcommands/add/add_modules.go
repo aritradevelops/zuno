@@ -24,6 +24,7 @@ var addModulesCmd = &cobra.Command{
 }
 
 func addModules(config *config.Config, modules []string, cmd *cobra.Command) {
+	addDomains(config, modules, cmd)
 	addRepositories(config, modules, cmd)
 	addServices(config, modules, cmd)
 	addAdapters(config, modules, cmd)

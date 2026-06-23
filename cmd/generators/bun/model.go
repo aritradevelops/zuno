@@ -89,8 +89,8 @@ func AddFieldsToModel(module string, fields []data.Field) error {
 			}
 		}
 
-		// 2️⃣ Update toRepository function
-		funcName := "toRepository"
+		// 2️⃣ Update toDomain function
+		funcName := "toDomain"
 
 		fn, ok := n.(*ast.FuncDecl)
 		if ok && fn.Name.Name == funcName {
@@ -102,14 +102,14 @@ func AddFieldsToModel(module string, fields []data.Field) error {
 					return true
 				}
 
-				// Look for repository.UserFields composite literal
+				// Look for domain.UserFields composite literal
 				se, ok := cl.Type.(*ast.SelectorExpr)
 				if !ok {
 					return true
 				}
 
 				pkgIdent, ok := se.X.(*ast.Ident)
-				if !ok || pkgIdent.Name != "repository" {
+				if !ok || pkgIdent.Name != "domain" {
 					return true
 				}
 

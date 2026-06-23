@@ -9,16 +9,6 @@ import (
 	"github.com/uptrace/bun"
 )
 
-func scopedFilter(actor *action.Actor) func(q bun.QueryBuilder) bun.QueryBuilder {
-	return func(q bun.QueryBuilder) bun.QueryBuilder {
-		switch actor.Scope {
-		case "owner":
-			q = q.Where("created_by = ?", actor.UID)
-		}
-		return q
-	}
-}
-
 func getSortOrder(order pagination.SortOrder) string {
 	if order == pagination.SortOrderAscending {
 		return "ASC"
@@ -26,10 +16,16 @@ func getSortOrder(order pagination.SortOrder) string {
 	return "DESC"
 }
 
-func paginate[T any](ctx context.Context, db *bun.DB, actor *action.Actor, opts *pagination.Options, searchFields []string) ([]T, *pagination.Info, error) {
+func paginate[T any](
+	ctx context.Context,
+	db *bun.DB,
+	actor *action.Actor,
+	opts *pagination.Options,
+	searchFields []string,
+	modifiers ...func(bun.QueryBuilder) bun.QueryBuilder,
+) ([]T, *pagination.Info, error) {
 	var m T
 	query := db.NewSelect().Model(m)
-	query.ApplyQueryBuilder(scopedFilter(actor))
 	// handle trash option
 	if opts.Trash {
 		query = query.Where("deleted_at IS NOT NULL")
@@ -41,6 +37,13 @@ func paginate[T any](ctx context.Context, db *bun.DB, actor *action.Actor, opts 
 	if opts.Search != "" && len(searchFields) > 0 {
 		for _, field := range searchFields {
 			query = query.Where("? LIKE ?", field, "%"+opts.Search+"%")
+		}
+	}
+
+	// apply custom query modifiers (such as filters)
+	for _, mod := range modifiers {
+		if mod != nil {
+			query = query.ApplyQueryBuilder(mod)
 		}
 	}
 
@@ -76,3 +79,4 @@ func paginate[T any](ctx context.Context, db *bun.DB, actor *action.Actor, opts 
 
 	return data, info, nil
 }
+
